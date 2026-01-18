@@ -1,0 +1,14 @@
+modules:
+  jira:globalPage:
+    - key: featbit-jira-hello-world-page
+      function: main
+      title: FeatBit
+      icon: https://developer.atlassian.com/platform/forge/images/icons/icon-gradient-blue.svg
+  function:
+    - key: main
+      handler: index.run
+app:
+  id: ari:cloud:ecosystem::app/YOUR_APP_ID
+permissions:
+  scopes:
+    - read:jira-work

@@ -1,4 +1,24 @@
 {
   "name": "featbit-jira",
-  "packageManager": "yarn@4.2.2"
+  "version": "1.0.0",
+  "description": "FeatBit integration for Jira",
+  "packageManager": "yarn@4.12.0",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "forge deploy",
+    "tunnel": "forge tunnel",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix"
+  },
+  "dependencies": {
+    "@forge/api": "^3.0.0",
+    "@forge/resolver": "^1.5.0"
+  },
+  "devDependencies": {
+    "@forge/cli": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.9.3"
+  }
 }
