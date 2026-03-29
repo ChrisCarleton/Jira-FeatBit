@@ -1,0 +1,86 @@
+version: '3.8'
+
+# Runs a local FeatBit instance for development/testing.
+# Usage:
+#   docker compose up -d
+#   docker compose down          (stop, keep data)
+#   docker compose down -v       (stop and wipe data)
+#
+# Admin UI:        http://localhost:8081
+# API server:      http://localhost:5000
+# Eval server:     http://localhost:5100
+
+services:
+  ui:
+    image: featbit/featbit-ui:latest
+    ports:
+      - '8081:80'
+    environment:
+      - API_URL=http://localhost:5000
+      - EVALUATION_URL=http://localhost:5100
+    depends_on:
+      - api-server
+      - evaluation-server
+    restart: unless-stopped
+
+  api-server:
+    image: featbit/featbit-api-server:latest
+    ports:
+      - '5000:5000'
+    environment:
+      - MongoDb__ConnectionString=mongodb://mongodb:27017
+      - MongoDb__Database=featbit
+      - Redis__ConnectionString=redis:6379
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  evaluation-server:
+    image: featbit/featbit-evaluation-server:latest
+    ports:
+      - '5100:5100'
+    environment:
+      - MongoDb__ConnectionString=mongodb://mongodb:27017
+      - MongoDb__Database=featbit
+      - Redis__ConnectionString=redis:6379
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:6.0
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:

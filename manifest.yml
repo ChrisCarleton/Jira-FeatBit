@@ -1,14 +1,42 @@
 modules:
+  # Shows a feature flag panel on every Jira issue
+  jira:issuePanel:
+    - key: featbit-flags-panel
+      resource: main
+      resolver:
+        function: resolver
+      title: FeatBit Feature Flags
+
+  # Global settings page for configuring the FeatBit connection
   jira:globalPage:
-    - key: featbit-jira-hello-world-page
-      function: main
-      title: FeatBit
-      icon: https://developer.atlassian.com/platform/forge/images/icons/icon-gradient-blue.svg
+    - key: featbit-settings
+      resource: main
+      resolver:
+        function: resolver
+      title: FeatBit Settings
+
   function:
+    - key: resolver
+      handler: index.handler
+
+  resource:
     - key: main
-      handler: index.run
+      path: static/dist
+      tunnel:
+        port: 3000
+
 app:
   id: ari:cloud:ecosystem::app/YOUR_APP_ID
+
 permissions:
   scopes:
     - read:jira-work
+    - write:jira-work
+    - storage:app
+  external:
+    fetch:
+      backend:
+        # Local docker-compose FeatBit instance (see docker-compose.yml)
+        - 'localhost'
+        # Add your hosted FeatBit domain here, e.g.:
+        # - 'featbit.your-company.com'

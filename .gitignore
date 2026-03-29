@@ -14,3 +14,16 @@
 
 dist/
 node_modules/
+
+# Frontend build output and dependencies
+static/dist/
+static/node_modules/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/extensions.json
+
+# Forge CLI
+.atlassian/

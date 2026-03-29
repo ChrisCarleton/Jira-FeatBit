@@ -24,5 +24,33 @@
   "env": {
     "node": true,
     "es2022": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["static/src/**/*.ts", "static/src/**/*.tsx"],
+      "parserOptions": {
+        "project": "./static/tsconfig.json"
+      },
+      "env": {
+        "node": false,
+        "browser": true
+      }
+    },
+    {
+      "files": ["tests/**/*.ts"],
+      "parserOptions": {
+        "project": "./tsconfig.test.json"
+      },
+      "env": {
+        "node": true,
+        "jest": true
+      },
+      "rules": {
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-argument": "off",
+        "@typescript-eslint/no-unsafe-call": "off"
+      }
+    }
+  ]
 }
