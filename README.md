@@ -123,18 +123,40 @@ cd static && yarn install && cd ..
 
 ### 2. Start a local FeatBit instance (optional, for testing)
 
+This project ships a standalone FeatBit stack (PostgreSQL only — no Redis, no Kafka) via `docker-compose.yml`.
+
+#### First-time startup
+
 ```bash
 docker compose up -d
 ```
 
+On the very first run PostgreSQL automatically executes every `.sql` file in `docker/postgres/` (the official FeatBit schema + migrations). Wait about 10–15 seconds for the containers to become healthy before opening the UI.
+
 Services:
-| | URL |
-|---|---|
-| Admin UI | http://localhost:8081 |
-| API server | http://localhost:5000 |
+
+|                   | URL                   |
+| ----------------- | --------------------- |
+| Admin UI          | http://localhost:8081 |
+| API server        | http://localhost:5000 |
 | Evaluation server | http://localhost:5100 |
 
 Default credentials: `test@featbit.com` / `123456`
+
+#### Manual database seed
+
+If the `postgres` Docker volume already exists the automatic init scripts are skipped (PostgreSQL only runs them against a brand-new, empty data directory). Use the seed script to initialise the database without recreating the volume:
+
+```bash
+yarn init-featbit
+```
+
+To **wipe all data** and start fresh:
+
+```bash
+yarn init-featbit --reset
+# equivalent to: docker compose down -v && docker compose up -d
+```
 
 Tear down: `docker compose down` (keep data) or `docker compose down -v` (wipe data).
 
@@ -204,19 +226,21 @@ forge deploy
 
 ## Useful commands
 
-| Command                   | What it does                                  |
-| ------------------------- | --------------------------------------------- |
-| `yarn build`              | Compile backend TypeScript                    |
-| `yarn test`               | Run the backend unit test suite               |
-| `yarn lint`               | ESLint the backend source                     |
-| `yarn lint:fix`           | Auto-fix lint issues                          |
-| `yarn format`             | Prettier-format backend source                |
-| `forge deploy`            | Deploy the app to Atlassian infrastructure    |
-| `forge install`           | Install the deployed app in a Jira site       |
-| `forge tunnel`            | Proxy Forge invocations to your local machine |
-| `forge logs`              | Stream live logs from the deployed app        |
-| `cd static && yarn dev`   | Start Vite dev server for the frontend        |
-| `cd static && yarn build` | Build the frontend for deployment             |
+| Command                     | What it does                                  |
+| --------------------------- | --------------------------------------------- |
+| `yarn build`                | Compile backend TypeScript                    |
+| `yarn test`                 | Run the backend unit test suite               |
+| `yarn lint`                 | ESLint the backend source                     |
+| `yarn lint:fix`             | Auto-fix lint issues                          |
+| `yarn format`               | Prettier-format backend source                |
+| `yarn init-featbit`         | Seed the FeatBit PostgreSQL database          |
+| `yarn init-featbit --reset` | Wipe and re-seed the FeatBit database         |
+| `forge deploy`              | Deploy the app to Atlassian infrastructure    |
+| `forge install`             | Install the deployed app in a Jira site       |
+| `forge tunnel`              | Proxy Forge invocations to your local machine |
+| `forge logs`                | Stream live logs from the deployed app        |
+| `cd static && yarn dev`     | Start Vite dev server for the frontend        |
+| `cd static && yarn build`   | Build the frontend for deployment             |
 
 - `src/index.ts` - Main resolver functions
 - `manifest.yml` - Forge app configuration

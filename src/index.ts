@@ -1,7 +1,7 @@
 import ResolverModule from '@forge/resolver';
-import { storage } from '@forge/api';
 import api, { route } from '@forge/api';
-import * as FeatBit from './featbit.js';
+import { kvs } from '@forge/kvs';
+import * as FeatBit from './featbit';
 
 // ---------------------------------------------------------------------------
 // Minimal typed wrapper around @forge/resolver
@@ -42,7 +42,7 @@ interface StoredConfig {
 // ---------------------------------------------------------------------------
 
 async function loadConfig(): Promise<StoredConfig | null> {
-  const raw = (await storage.get('featbit-config')) as StoredConfig | undefined;
+  const raw: StoredConfig | undefined = await kvs.get('featbit-config');
   return raw ?? null;
 }
 
@@ -93,7 +93,7 @@ resolver.define('saveConfig', async (req) => {
     accessToken: string;
     environments: StoredEnvironment[];
   };
-  await storage.set('featbit-config', { apiUrl, accessToken, environments });
+  await kvs.set('featbit-config', { apiUrl, accessToken, environments });
   return { success: true };
 });
 
@@ -107,7 +107,7 @@ resolver.define('fetchEnvironments', async (req) => {
   try {
     const projects = await FeatBit.listProjects({ apiUrl, accessToken });
     const environments: StoredEnvironment[] = projects.flatMap(
-      (p) => p.environments ?? []
+      (p: FeatBit.Project) => p.environments ?? []
     );
     return { environments };
   } catch (err) {
@@ -259,7 +259,9 @@ resolver.define('linkFlag', async (req) => {
       try {
         // Find the flag in this environment by key.
         const matches = await FeatBit.searchFlags(featbitCfg, env.id, flagKey);
-        const flag = matches.find((f) => f.key === flagKey);
+        const flag = matches.find(
+          (f: FeatBit.FeatureFlag) => f.key === flagKey
+        );
 
         if (!flag) {
           return {

@@ -52,16 +52,16 @@ export default function IssuePanel() {
 
   if (!issueKey)
     return (
-      <div className="px-4 py-3 border border-gray-200 rounded bg-gray-100 text-[#172B4D] leading-relaxed">
+      <div className="px-4 py-3 border border-[#454F59] rounded bg-[#22272B] text-[#B6C2CF] leading-relaxed">
         Could not determine the current issue key.
       </div>
     );
 
-  if (loading) return <div className="p-3 text-gray-500">Loading flags…</div>;
+  if (loading) return <div className="p-3 text-[#8C9BAB]">Loading flags…</div>;
 
   if (error?.includes('not configured')) {
     return (
-      <div className="px-4 py-3 border border-gray-200 rounded bg-gray-100 text-[#172B4D] leading-relaxed">
+      <div className="px-4 py-3 border border-[#454F59] rounded bg-[#22272B] text-[#B6C2CF] leading-relaxed">
         FeatBit is not configured.{' '}
         <strong>Open the FeatBit Settings global page</strong> to enter your API
         URL and access token.
@@ -71,7 +71,7 @@ export default function IssuePanel() {
 
   if (error)
     return (
-      <div className="px-4 py-3 border border-red-200 rounded bg-red-50 text-red-700 leading-relaxed">
+      <div className="px-4 py-3 border border-[#F15B50] rounded bg-[#3D1508] text-[#F15B50] leading-relaxed">
         {error}
       </div>
     );
@@ -79,19 +79,19 @@ export default function IssuePanel() {
   return (
     <div className="py-3">
       <div className="flex justify-between items-center mb-3">
-        <span className="font-semibold text-sm text-[#172B4D]">
+        <span className="font-semibold text-sm text-[#B6C2CF]">
           {flags.length} flag{flags.length !== 1 ? 's' : ''} linked to{' '}
           {issueKey}
         </span>
         <div className="flex gap-2">
           <button
-            className="px-3 py-1 text-sm font-medium rounded border border-gray-300 bg-gray-100 text-[#172B4D] cursor-pointer"
+            className="px-3 py-1 text-sm font-medium rounded border border-[#454F59] bg-[#2C333A] text-[#B6C2CF] cursor-pointer"
             onClick={() => setModal('link')}
           >
             Link existing flag
           </button>
           <button
-            className="px-3 py-1 text-sm font-medium rounded border border-blue-700 bg-blue-700 text-white cursor-pointer"
+            className="px-3 py-1 text-sm font-medium rounded border border-[#0C66E4] bg-[#0C66E4] text-white cursor-pointer"
             onClick={() => setModal('create')}
           >
             + Create flag
@@ -100,7 +100,7 @@ export default function IssuePanel() {
       </div>
 
       {flags.length === 0 ? (
-        <div className="py-6 text-center text-gray-500">
+        <div className="py-6 text-center text-[#8C9BAB]">
           <div>No feature flags linked to {issueKey} yet.</div>
           <div className="mt-2 text-xs">
             Create a new flag or link an existing one tagged with{' '}

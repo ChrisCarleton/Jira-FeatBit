@@ -6,6 +6,7 @@ modules:
       resolver:
         function: resolver
       title: FeatBit Feature Flags
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
 
   # Global settings page for configuring the FeatBit connection
   jira:globalPage:
@@ -19,14 +20,16 @@ modules:
     - key: resolver
       handler: index.handler
 
-  resource:
-    - key: main
-      path: static/dist
-      tunnel:
-        port: 3000
+resources:
+  - key: main
+    path: static/dist
+    tunnel:
+      port: 3000
 
 app:
-  id: ari:cloud:ecosystem::app/YOUR_APP_ID
+  id: ari:cloud:ecosystem::app/0b83f258-62f0-418c-ae30-a7be87b694f1
+  runtime:
+    name: nodejs20.x
 
 permissions:
   scopes:
@@ -36,7 +39,5 @@ permissions:
   external:
     fetch:
       backend:
-        # Local docker-compose FeatBit instance (see docker-compose.yml)
-        - 'localhost'
         # Add your hosted FeatBit domain here, e.g.:
-        # - 'featbit.your-company.com'
+        - 'featbit.your-company.com'

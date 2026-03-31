@@ -64,21 +64,21 @@ export default function LinkFlagModal({ issueKey, onClose, onDone }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded w-[480px] max-w-[90vw] p-6 shadow-xl"
+        className="bg-[#282E33] rounded w-[480px] max-w-[90vw] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal
       >
-        <h2 className="text-base font-bold text-[#172B4D] mb-4">
+        <h2 className="text-base font-bold text-[#B6C2CF] mb-4">
           Link existing flag
         </h2>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-[#8C9BAB] mb-4">
           Search for a feature flag and select it to tag it with{' '}
           <strong>{issueKey}</strong>.
         </p>
 
         {error && (
-          <div className="px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700 mb-3">
+          <div className="px-3 py-2 bg-[#3D1508] border border-[#F15B50] rounded text-sm text-[#F15B50] mb-3">
             {error}
           </div>
         )}
@@ -86,7 +86,7 @@ export default function LinkFlagModal({ issueKey, onClose, onDone }: Props) {
         <div className="flex gap-2 mb-3">
           <input
             ref={inputRef}
-            className="flex-1 px-2.5 py-1.5 border-2 border-gray-200 rounded text-sm text-[#172B4D] outline-none focus:border-blue-500"
+            className="flex-1 px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF]"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -94,7 +94,7 @@ export default function LinkFlagModal({ issueKey, onClose, onDone }: Props) {
             placeholder="Search by flag name or key…"
           />
           <button
-            className="px-3.5 py-1.5 bg-gray-100 text-[#172B4D] border border-gray-300 rounded text-sm font-medium cursor-pointer whitespace-nowrap disabled:opacity-50"
+            className="px-3.5 py-1.5 bg-[#2C333A] text-[#B6C2CF] border border-[#454F59] rounded text-sm font-medium cursor-pointer whitespace-nowrap disabled:opacity-50"
             onClick={() => {
               void handleSearch();
             }}
@@ -104,29 +104,31 @@ export default function LinkFlagModal({ issueKey, onClose, onDone }: Props) {
           </button>
         </div>
 
-        <div className="max-h-60 overflow-y-auto border border-gray-200 rounded mb-3">
+        <div className="max-h-60 overflow-y-auto border border-[#454F59] rounded mb-3 bg-[#22272B]">
           {!searched && (
-            <div className="py-5 text-center text-gray-500 text-sm">
+            <div className="py-5 text-center text-[#8C9BAB] text-sm">
               Enter a search term above.
             </div>
           )}
           {searched && results.length === 0 && (
-            <div className="py-5 text-center text-gray-500 text-sm">
+            <div className="py-5 text-center text-[#8C9BAB] text-sm">
               No flags found. Try a different search term.
             </div>
           )}
           {results.map((flag) => (
             <div
               key={flag.key}
-              className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-0 transition-colors ${
-                selected?.key === flag.key ? 'bg-blue-50' : 'hover:bg-gray-50'
+              className={`px-3 py-2 cursor-pointer border-b border-[#2C333A] last:border-0 transition-colors ${
+                selected?.key === flag.key
+                  ? 'bg-[#1C2B42]'
+                  : 'hover:bg-[#22272B]'
               }`}
               onClick={() => setSelected(flag)}
             >
-              <div className="font-medium text-[#172B4D] text-sm">
+              <div className="font-medium text-[#B6C2CF] text-sm">
                 {flag.name}
               </div>
-              <div className="font-mono text-[11px] text-gray-500">
+              <div className="font-mono text-[11px] text-[#8C9BAB]">
                 {flag.key}
               </div>
             </div>
@@ -135,14 +137,14 @@ export default function LinkFlagModal({ issueKey, onClose, onDone }: Props) {
 
         <div className="flex justify-end gap-2">
           <button
-            className="px-4 py-1.5 bg-gray-100 text-[#172B4D] border border-gray-300 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="px-4 py-1.5 bg-[#2C333A] text-[#B6C2CF] border border-[#454F59] rounded text-sm font-medium cursor-pointer disabled:opacity-50"
             onClick={onClose}
             disabled={submitting}
           >
             Cancel
           </button>
           <button
-            className={`px-4 py-1.5 bg-blue-700 text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50 ${
+            className={`px-4 py-1.5 bg-[#0C66E4] text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50 ${
               !selected ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             onClick={() => {

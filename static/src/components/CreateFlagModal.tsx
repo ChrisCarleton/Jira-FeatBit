@@ -76,43 +76,43 @@ export default function CreateFlagModal({ issueKey, onClose, onDone }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded w-[440px] max-w-[90vw] p-6 shadow-xl"
+        className="bg-[#282E33] rounded w-[440px] max-w-[90vw] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal
       >
-        <h2 className="text-base font-bold text-[#172B4D] mb-4">
+        <h2 className="text-base font-bold text-[#B6C2CF] mb-4">
           Create feature flag
         </h2>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-[#8C9BAB] mb-4">
           The flag will be created in all configured environments and tagged
           with <strong>{issueKey}</strong>.
         </p>
 
         {error && (
-          <div className="px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700 mb-3">
+          <div className="px-3 py-2 bg-[#3D1508] border border-[#F15B50] rounded text-sm text-[#F15B50] mb-3">
             {error}
           </div>
         )}
 
-        <label className="block text-xs font-semibold text-gray-500 mb-1">
+        <label className="block text-xs font-semibold text-[#8C9BAB] mb-1">
           Flag name
         </label>
         <input
           ref={nameRef}
-          className="w-full px-2.5 py-1.5 border-2 border-gray-200 rounded text-sm text-[#172B4D] outline-none focus:border-blue-500 mb-3"
+          className="w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF] mb-3"
           type="text"
           value={name}
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="e.g. My New Feature"
         />
 
-        <label className="block text-xs font-semibold text-gray-500 mb-1">
+        <label className="block text-xs font-semibold text-[#8C9BAB] mb-1">
           Flag key
         </label>
         <input
-          className="w-full px-2.5 py-1.5 border-2 border-gray-200 rounded text-sm text-[#172B4D] outline-none focus:border-blue-500 mb-3"
+          className="w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF] mb-3"
           type="text"
           value={key}
           onChange={(e) => handleKeyChange(e.target.value)}
@@ -121,14 +121,14 @@ export default function CreateFlagModal({ issueKey, onClose, onDone }: Props) {
 
         <div className="flex justify-end gap-2 mt-2">
           <button
-            className="px-4 py-1.5 bg-gray-100 text-[#172B4D] border border-gray-300 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="px-4 py-1.5 bg-[#2C333A] text-[#B6C2CF] border border-[#454F59] rounded text-sm font-medium cursor-pointer disabled:opacity-50"
             onClick={onClose}
             disabled={submitting}
           >
             Cancel
           </button>
           <button
-            className="px-4 py-1.5 bg-blue-700 text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="px-4 py-1.5 bg-[#0C66E4] text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
             onClick={() => {
               void handleSubmit();
             }}

@@ -11,7 +11,7 @@ export default function App() {
   }, []);
 
   if (!moduleKey) {
-    return <div style={{ padding: 16, color: '#6B778C' }}>Loading…</div>;
+    return <div className="p-4 text-[#8C9BAB]">Loading…</div>;
   }
 
   if (moduleKey === 'featbit-settings') {
