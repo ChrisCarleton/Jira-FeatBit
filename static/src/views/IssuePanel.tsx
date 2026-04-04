@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { view } from '@forge/bridge';
 import { getFlagsForIssue } from '../api';
 import type { Environment, FlagRow } from '../types';
@@ -15,6 +15,9 @@ export default function IssuePanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
+  const [panelMsg, setPanelMsg] = useState<string | null>(null);
+  const [panelMsgFading, setPanelMsgFading] = useState(false);
+  const panelMsgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void view.getContext().then((ctx) => {
@@ -45,9 +48,21 @@ export default function IssuePanel() {
     if (issueKey) void load(issueKey);
   }, [issueKey, load]);
 
-  const handleDone = () => {
+  const handleDone = (msg?: string) => {
     setModal(null);
     if (issueKey) void load(issueKey);
+    if (msg) {
+      setPanelMsgFading(false);
+      setPanelMsg(msg);
+      if (panelMsgTimer.current) clearTimeout(panelMsgTimer.current);
+      panelMsgTimer.current = setTimeout(() => {
+        setPanelMsgFading(true);
+        setTimeout(() => {
+          setPanelMsg(null);
+          setPanelMsgFading(false);
+        }, 200);
+      }, 3300);
+    }
   };
 
   if (!issueKey)
@@ -77,7 +92,17 @@ export default function IssuePanel() {
     );
 
   return (
-    <div className="py-3">
+    <div
+      className="py-3"
+      style={{ position: 'relative', minHeight: modal ? 520 : undefined }}
+    >
+      {panelMsg && (
+        <div
+          className={`px-3.5 py-2.5 bg-[#1C3329] border border-[#4BCE97] rounded text-sm text-[#4BCE97] mb-3 ${panelMsgFading ? 'animate-fade-out' : 'animate-fade-in'}`}
+        >
+          {panelMsg}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-3">
         <span className="font-semibold text-sm text-[#B6C2CF]">
           {flags.length} flag{flags.length !== 1 ? 's' : ''} linked to{' '}

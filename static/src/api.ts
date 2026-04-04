@@ -51,6 +51,7 @@ export async function createFlag(payload: {
   key: string;
 }): Promise<{
   results?: Array<{ envName: string; success: boolean; error?: string }>;
+  error?: string;
 }> {
   return invoke('createFlag', payload);
 }
@@ -60,6 +61,7 @@ export async function linkFlag(payload: {
   flagKey: string;
 }): Promise<{
   results?: Array<{ envName: string; success: boolean; error?: string }>;
+  error?: string;
 }> {
   return invoke('linkFlag', payload);
 }

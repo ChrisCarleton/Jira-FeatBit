@@ -64,7 +64,7 @@ describe('listProjects', () => {
       'http://localhost:5000/api/v1/projects',
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: 'Bearer test-token',
+          Authorization: 'test-token',
         }),
       })
     );

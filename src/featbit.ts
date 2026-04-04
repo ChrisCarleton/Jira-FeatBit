@@ -39,8 +39,14 @@ export interface FlagListResponse {
 
 function headers(accessToken: string): Record<string, string> {
   return {
-    Authorization: `Bearer ${accessToken}`,
+    // FeatBit's OpenApiHandler reads Request.Headers.Authorization verbatim and
+    // compares it to the stored token value (e.g. "api-xxx"). Sending a "Bearer"
+    // scheme prefix would cause the lookup to fail. Pass the raw token directly.
+    Authorization: accessToken,
     'Content-Type': 'application/json',
+    // Bypass the ngrok browser-warning interstitial page on free-tier tunnels.
+    // Ignored by non-ngrok servers.
+    'ngrok-skip-browser-warning': 'true',
   };
 }
 

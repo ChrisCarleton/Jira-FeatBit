@@ -23,8 +23,8 @@ modules:
 resources:
   - key: main
     path: static/dist
-    tunnel:
-      port: 3000
+    # No tunnel.port — forge tunnel serves static/dist directly.
+    # This avoids CSP violations caused by Vite dev server inline style injection.
 
 app:
   id: ari:cloud:ecosystem::app/0b83f258-62f0-418c-ae30-a7be87b694f1
@@ -39,5 +39,6 @@ permissions:
   external:
     fetch:
       backend:
-        # Add your hosted FeatBit domain here, e.g.:
-        - 'featbit.your-company.com'
+        # Allow any HTTPS domain so users can configure their own self-hosted FeatBit instance.
+        # Forge enforces HTTPS at the runtime level regardless of this setting.
+        - '*'

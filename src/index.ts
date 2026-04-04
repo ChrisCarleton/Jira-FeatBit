@@ -100,10 +100,14 @@ resolver.define('saveConfig', async (req) => {
 // ── Connection test / environment discovery (used by Settings page) ──────────
 
 resolver.define('fetchEnvironments', async (req) => {
-  const { apiUrl, accessToken } = req.payload as {
-    apiUrl: string;
-    accessToken: string;
-  };
+  const payload = req.payload as { apiUrl: string; accessToken: string };
+  const apiUrl = payload.apiUrl;
+  let accessToken = payload.accessToken;
+  // If no token was supplied (saved-token flow after page reload), use stored one.
+  if (!accessToken) {
+    const stored = await loadConfig();
+    accessToken = stored?.accessToken ?? '';
+  }
   try {
     const projects = await FeatBit.listProjects({ apiUrl, accessToken });
     const environments: StoredEnvironment[] = projects.flatMap(
@@ -218,6 +222,11 @@ resolver.define('createFlag', async (req) => {
 
   const cfg = await loadConfig();
   if (!cfg) return { error: 'FeatBit is not configured.' };
+  if (cfg.environments.length === 0)
+    return {
+      error:
+        'No environments configured. Open FeatBit Settings and run "Test connection & load environments" first.',
+    };
 
   const featbitCfg = { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken };
   const tags = [issueKey];
@@ -251,6 +260,11 @@ resolver.define('linkFlag', async (req) => {
 
   const cfg = await loadConfig();
   if (!cfg) return { error: 'FeatBit is not configured.' };
+  if (cfg.environments.length === 0)
+    return {
+      error:
+        'No environments configured. Open FeatBit Settings and run "Test connection & load environments" first.',
+    };
 
   const featbitCfg = { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken };
 

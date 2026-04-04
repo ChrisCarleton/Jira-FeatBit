@@ -13,7 +13,7 @@ function nameToKey(name: string): string {
 interface Props {
   issueKey: string;
   onClose: () => void;
-  onDone: () => void;
+  onDone: (msg?: string) => void;
 }
 
 export default function CreateFlagModal({ issueKey, onClose, onDone }: Props) {
@@ -55,13 +55,17 @@ export default function CreateFlagModal({ issueKey, onClose, onDone }: Props) {
       key: key.trim(),
     });
     setSubmitting(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
     const failed = res.results?.filter((r) => !r.success) ?? [];
     if (failed.length > 0) {
       setError(
         `Failed in: ${failed.map((f) => `${f.envName} – ${f.error ?? 'unknown error'}`).join('; ')}`
       );
     } else {
-      onDone();
+      onDone('Feature flag created successfully.');
     }
   };
 
@@ -72,7 +76,7 @@ export default function CreateFlagModal({ issueKey, onClose, onDone }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-[rgba(9,30,66,0.54)] flex items-center justify-center z-50"
+      className="absolute inset-0 bg-[rgba(9,30,66,0.54)] flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div

@@ -178,7 +178,28 @@ forge deploy
 forge install        # install in your Jira cloud site
 ```
 
-### 5. Configure the app in Jira
+### 5. Create a FeatBit access token
+
+The app authenticates with the FeatBit API using a **Service** token. To create one:
+
+1. In the FeatBit Admin UI, go to **Integrations → Access Tokens** and click **Add**.
+2. Set **Type** to `Service`.
+3. Under **Permissions**, enable the following and leave everything else unchecked:
+
+   | Section      | Setting          | Value            |
+   | ------------ | ---------------- | ---------------- |
+   | Feature flag | Resources        | All resources    |
+   |              | Actions (`*`)    | ✅ (all actions) |
+   | Project      | Resources        | All resources    |
+   |              | CanAccessProject | ✅               |
+   | Environment  | Resources        | All resources    |
+   |              | CanAccessEnv     | ✅               |
+
+4. Click **Save** and copy the generated token — it will not be shown again.
+
+> The token needs feature-flag read/write access to create flags and update tags, plus `CanAccessProject` and `CanAccessEnv` so it can discover projects and environments during the settings step.
+
+### 6. Configure the app in Jira
 
 1. In Jira, open **Apps → FeatBit Settings**.
 2. Enter your FeatBit API URL (e.g. `http://localhost:5000` for local Docker).
