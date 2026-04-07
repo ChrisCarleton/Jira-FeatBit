@@ -1,5 +1,7 @@
 # featbit-jira
 
+[![CI](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml/badge.svg)](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml)
+
 Atlassian Forge app that integrates [FeatBit](https://github.com/featbit/featbit) feature flags directly into Jira. From any Jira ticket you can view linked flags across multiple environments, create new flags, and link existing ones — all without leaving Jira.
 
 ## How it works
@@ -80,7 +82,7 @@ All backend logic lives in `src/index.ts`. Each resolver is called from the fron
 | `saveConfig`        | Persists API URL, access token, and environment list to Forge Storage.                                                                                              |
 | `fetchEnvironments` | Calls the FeatBit API with supplied credentials to discover all projects and their environments (used during setup to test the connection).                         |
 | `getFlagsForIssue`  | Given an issue key, queries each configured environment for flags tagged with that key or its parent epic's key. Returns a merged list with per-environment status. |
-| `searchFlags`       | Full-text search of flags by name or key in the primary environment. Used by the "Link existing flag" modal.                                                        |
+| `searchFlags`       | Full-text search of flags by name or key across all configured environments. Used by the "Link existing flag" modal.                                                |
 | `createFlag`        | Creates a boolean flag in all configured environments simultaneously, pre-tagged with the issue key.                                                                |
 | `linkFlag`          | Adds the issue key tag to an existing flag across all environments.                                                                                                 |
 
@@ -272,6 +274,16 @@ forge deploy
 | `forge tunnel`              | Proxy Forge invocations to your local machine |
 | `forge logs`                | Stream live logs from the deployed app        |
 | `cd static && yarn dev`     | Start Vite dev server for the frontend        |
+
+## CI
+
+A GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs automatically on every push and pull request. It:
+
+1. Installs backend and frontend dependencies (Yarn 4 via Corepack)
+2. Type-checks the backend (`tsc --noEmit`)
+3. Runs the backend Jest test suite
+4. Type-checks and builds the frontend (`vue-tsc` + Vite)
+5. Runs the frontend Vitest suite
 
 ## Testing
 

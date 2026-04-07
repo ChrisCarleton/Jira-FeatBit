@@ -16,7 +16,10 @@ describe('ToastMessage', () => {
   it('applies success (green) styles by default', () => {
     const wrapper = mount(ToastMessage, { props: { message: 'Done' } });
     expect(wrapper.find('[role="status"]').classes().join(' ')).toContain(
-      '4BCE97'
+      'bg-success-bg'
+    );
+    expect(wrapper.find('[role="status"]').classes().join(' ')).toContain(
+      'text-success'
     );
   });
 
@@ -25,7 +28,10 @@ describe('ToastMessage', () => {
       props: { message: 'Failed', variant: 'error' },
     });
     expect(wrapper.find('[role="status"]').classes().join(' ')).toContain(
-      'F15B50'
+      'bg-danger-bg'
+    );
+    expect(wrapper.find('[role="status"]').classes().join(' ')).toContain(
+      'text-danger'
     );
   });
 

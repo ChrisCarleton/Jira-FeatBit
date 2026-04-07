@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { router } from '@forge/bridge';
 import type { Environment, FlagRow } from '../types';
 
@@ -7,6 +8,7 @@ const props = defineProps<{
   environments: Environment[];
   portalUrl?: string;
   toggling?: Set<string>;
+  readOnlyEnvIds?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -25,9 +27,9 @@ function statusLabel(flag: FlagRow, envId: string): string {
 
 function statusClass(flag: FlagRow, envId: string): string {
   const s = getEnvStatus(flag, envId);
-  if (s === null) return 'bg-[#2C333A] text-[#8C9BAB]';
-  if (s) return 'bg-[#1C3329] text-[#4BCE97]';
-  return 'bg-[#2C333A] text-[#626F86]';
+  if (s === null) return 'bg-surface-overlay text-text-subtle';
+  if (s) return 'bg-success-bg text-success';
+  return 'bg-surface-overlay text-text-muted';
 }
 
 function flagUrl(portalUrl: string, flagKey: string): string {
@@ -41,22 +43,55 @@ function openFlag(portalUrl: string, flagKey: string): void {
 function isToggling(flagKey: string, envId: string): boolean {
   return props.toggling?.has(`${envId}:${flagKey}`) ?? false;
 }
+
+function isReadOnly(envId: string): boolean {
+  return props.readOnlyEnvIds?.includes(envId) ?? false;
+}
+
+/** Groups environments by project for the header row. */
+const projectGroups = computed(() => {
+  const groups = new Map<
+    string,
+    { projectName: string; envs: Environment[] }
+  >();
+  for (const env of props.environments) {
+    const pid = env.projectId ?? '';
+    if (!groups.has(pid)) {
+      groups.set(pid, { projectName: env.projectName ?? pid, envs: [] });
+    }
+    groups.get(pid)!.envs.push(env);
+  }
+  return Array.from(groups.values());
+});
+
+const hasMultipleProjects = computed(() => projectGroups.value.length > 1);
 </script>
 
 <template>
   <div class="overflow-x-auto">
     <table class="w-full border-collapse text-sm">
       <thead>
+        <tr v-if="hasMultipleProjects">
+          <th class="border-b-2 border-border"></th>
+          <th
+            v-for="group in projectGroups"
+            :key="group.projectName"
+            :colspan="group.envs.length"
+            class="text-center px-2.5 py-1 text-[11px] font-bold text-text-subtle uppercase tracking-wider border-b border-l border-border"
+          >
+            {{ group.projectName }}
+          </th>
+        </tr>
         <tr>
           <th
-            class="text-left px-2.5 py-1.5 text-[11px] font-bold text-[#8C9BAB] uppercase tracking-wider border-b-2 border-[#454F59] whitespace-nowrap"
+            class="text-left px-2.5 py-1.5 text-[11px] font-bold text-text-subtle uppercase tracking-wider border-b-2 border-border whitespace-nowrap"
           >
             Flag
           </th>
           <th
             v-for="env in environments"
             :key="env.id"
-            class="text-center px-2.5 py-1.5 text-[11px] font-bold text-[#8C9BAB] uppercase tracking-wider border-b-2 border-[#454F59] whitespace-nowrap"
+            class="text-center px-2.5 py-1.5 text-[11px] font-bold text-text-subtle uppercase tracking-wider border-b-2 border-border whitespace-nowrap"
           >
             {{ env.name }}
           </th>
@@ -65,30 +100,38 @@ function isToggling(flagKey: string, envId: string): boolean {
       <tbody>
         <tr v-for="flag in flags" :key="flag.key">
           <td
-            class="px-2.5 py-2 border-b border-[#2C333A] text-[#B6C2CF] align-middle"
+            class="px-2.5 py-2 border-b border-surface-overlay text-text align-middle"
           >
             <button
               v-if="portalUrl"
               @click="openFlag(portalUrl, flag.key)"
-              class="block font-medium text-[#579DFF] hover:underline cursor-pointer bg-transparent border-0 p-0 text-left"
+              class="block font-medium text-link hover:underline cursor-pointer bg-transparent border-0 p-0 text-left"
             >
               {{ flag.name }}
             </button>
             <span v-else class="block font-medium">{{ flag.name }}</span>
-            <span class="font-mono text-[11px] text-[#8C9BAB]">{{
+            <span class="font-mono text-[11px] text-text-subtle">{{
               flag.key
             }}</span>
           </td>
           <td
             v-for="env in environments"
             :key="env.id"
-            class="px-2.5 py-2 border-b border-[#2C333A] text-center align-middle"
+            class="px-2.5 py-2 border-b border-surface-overlay text-center align-middle"
           >
             <span
               v-if="getEnvStatus(flag, env.id) === null"
-              class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#2C333A] text-[#8C9BAB]"
+              class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-overlay text-text-subtle"
             >
               N/A
+            </span>
+            <span
+              v-else-if="isReadOnly(env.id)"
+              class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold"
+              :class="statusClass(flag, env.id)"
+              title="Read-only environment"
+            >
+              {{ statusLabel(flag, env.id) }}
             </span>
             <button
               v-else

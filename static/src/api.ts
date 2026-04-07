@@ -33,6 +33,8 @@ export async function getFlagsForIssue(issueKey: string): Promise<{
   flags?: FlagRow[];
   environments?: Environment[];
   portalUrl?: string;
+  canCreateFlag?: boolean;
+  readOnlyEnvIds?: string[];
   error?: string;
 }> {
   return invoke('getFlagsForIssue', { issueKey });

@@ -15,6 +15,8 @@ const issueKey = ref<string | null>(null);
 const flags = ref<FlagRow[]>([]);
 const environments = ref<Environment[]>([]);
 const portalUrl = ref<string | undefined>(undefined);
+const canCreateFlag = ref(true);
+const readOnlyEnvIds = ref<string[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const toggling = ref(new Set<string>());
@@ -39,6 +41,8 @@ async function load(key: string) {
       flags.value = res.flags ?? [];
       environments.value = res.environments ?? [];
       portalUrl.value = res.portalUrl || undefined;
+      canCreateFlag.value = res.canCreateFlag !== false;
+      readOnlyEnvIds.value = res.readOnlyEnvIds ?? [];
     }
   } catch (e) {
     error.value = String(e);
@@ -91,16 +95,16 @@ async function handleToggle(payload: {
 <template>
   <div
     v-if="!issueKey"
-    class="px-4 py-3 border border-[#454F59] rounded bg-[#22272B] text-[#B6C2CF] leading-relaxed"
+    class="px-4 py-3 border border-border rounded bg-surface text-text leading-relaxed"
   >
     Could not determine the current issue key.
   </div>
 
-  <div v-else-if="loading" class="p-3 text-[#8C9BAB]">Loading flags…</div>
+  <div v-else-if="loading" class="p-3 text-text-subtle">Loading flags…</div>
 
   <div
     v-else-if="error?.includes('not configured')"
-    class="px-4 py-3 border border-[#454F59] rounded bg-[#22272B] text-[#B6C2CF] leading-relaxed"
+    class="px-4 py-3 border border-border rounded bg-surface text-text leading-relaxed"
   >
     FeatBit is not configured.
     <strong>Open the FeatBit Settings global page</strong> to enter your API URL
@@ -109,7 +113,7 @@ async function handleToggle(payload: {
 
   <div
     v-else-if="error"
-    class="px-4 py-3 border border-[#F15B50] rounded bg-[#3D1508] text-[#F15B50] leading-relaxed"
+    class="px-4 py-3 border border-danger rounded bg-danger-bg text-danger leading-relaxed"
   >
     {{ error }}
   </div>
@@ -125,19 +129,20 @@ async function handleToggle(payload: {
     />
 
     <div class="flex justify-between items-center mb-3">
-      <span class="font-semibold text-sm text-[#B6C2CF]">
+      <span class="font-semibold text-sm text-text">
         {{ flags.length }} flag{{ flags.length !== 1 ? 's' : '' }} linked to
         {{ issueKey }}
       </span>
       <div class="flex gap-2">
         <button
-          class="px-3 py-1 text-sm font-medium rounded border border-[#454F59] bg-[#2C333A] text-[#B6C2CF] cursor-pointer"
+          class="px-3 py-1 text-sm font-medium rounded border border-border bg-surface-overlay text-text cursor-pointer"
           @click="modal = 'link'"
         >
           Link existing flag
         </button>
         <button
-          class="px-3 py-1 text-sm font-medium rounded border border-[#0C66E4] bg-[#0C66E4] text-white cursor-pointer"
+          v-if="canCreateFlag"
+          class="px-3 py-1 text-sm font-medium rounded border border-accent bg-accent text-white cursor-pointer"
           @click="modal = 'create'"
         >
           + Create flag
@@ -145,7 +150,7 @@ async function handleToggle(payload: {
       </div>
     </div>
 
-    <div v-if="flags.length === 0" class="py-6 text-center text-[#8C9BAB]">
+    <div v-if="flags.length === 0" class="py-6 text-center text-text-subtle">
       <div>No feature flags linked to {{ issueKey }} yet.</div>
       <div class="mt-2 text-xs">
         Create a new flag or link an existing one tagged with
@@ -159,6 +164,7 @@ async function handleToggle(payload: {
       :environments="environments"
       :portal-url="portalUrl"
       :toggling="toggling"
+      :read-only-env-ids="readOnlyEnvIds"
       @toggle="handleToggle"
     />
 

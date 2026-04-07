@@ -155,7 +155,7 @@ export async function searchFlags(
   const params = new URLSearchParams({
     pageIndex: '0',
     pageSize: '20',
-    searchText: query,
+    name: query,
     isArchived: 'false',
   });
   const res = await safeFetch(
@@ -247,15 +247,15 @@ export async function toggleFlag(
 export async function updateFlagTags(
   config: FeatBitConfig,
   envId: string,
-  flagId: string,
+  flagKey: string,
   tags: string[]
 ): Promise<void> {
   const res = await safeFetch(
-    `${config.apiUrl}/api/v1/envs/${encodeURIComponent(envId)}/feature-flags/${encodeURIComponent(flagId)}/tags`,
+    `${config.apiUrl}/api/v1/envs/${encodeURIComponent(envId)}/feature-flags/${encodeURIComponent(flagKey)}/tags`,
     {
       method: 'PUT',
       headers: headers(config.accessToken),
-      body: JSON.stringify({ tags }),
+      body: JSON.stringify(tags),
     }
   );
   if (!res.ok) {

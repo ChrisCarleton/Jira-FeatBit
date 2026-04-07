@@ -22,11 +22,11 @@ onMounted(() => {
 <template>
   <div
     v-if="ctxError"
-    class="p-4 text-[#F15B50] border border-[#F15B50] rounded bg-[#3D1508] text-xs"
+    class="p-4 text-danger border border-danger rounded bg-danger-bg text-xs"
   >
     Context error: {{ ctxError }}
   </div>
-  <div v-else-if="!moduleKey" class="p-4 text-[#8C9BAB]">Loading…</div>
+  <div v-else-if="!moduleKey" class="p-4 text-text-subtle">Loading…</div>
   <Settings v-else-if="moduleKey === 'featbit-settings'" />
   <IssuePanel v-else />
 </template>

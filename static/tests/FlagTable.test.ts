@@ -10,8 +10,20 @@ vi.mock('@forge/bridge', () => ({
 }));
 
 const environments: Environment[] = [
-  { id: 'env1', key: 'prod', name: 'Production' },
-  { id: 'env2', key: 'staging', name: 'Staging' },
+  {
+    id: 'env1',
+    key: 'prod',
+    name: 'Production',
+    projectId: 'p1',
+    projectName: 'Default',
+  },
+  {
+    id: 'env2',
+    key: 'staging',
+    name: 'Staging',
+    projectId: 'p1',
+    projectName: 'Default',
+  },
 ];
 
 function makeFlag(overrides: Partial<FlagRow> = {}): FlagRow {

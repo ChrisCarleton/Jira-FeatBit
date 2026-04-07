@@ -151,12 +151,12 @@ describe('listFlagsByTag', () => {
 describe('searchFlags', () => {
   const envId = 'env-abc';
 
-  it('calls the correct URL with searchText and isArchived params', async () => {
+  it('calls the correct URL with Name and IsArchived params', async () => {
     mockFetch.mockResolvedValueOnce(ok({ items: [], totalCount: 0 }));
     await FeatBit.searchFlags(cfg, envId, 'my-feature');
     const url = (mockFetch.mock.calls[0] as [string, RequestInit])[0];
     expect(url).toContain('/api/v1/envs/env-abc/feature-flags');
-    expect(url).toContain('searchText=my-feature');
+    expect(url).toContain('name=my-feature');
     expect(url).toContain('isArchived=false');
   });
 
@@ -244,38 +244,38 @@ describe('createFlag', () => {
 
 describe('updateFlagTags', () => {
   const envId = 'env-abc';
-  const flagId = 'flag-id-123';
+  const flagKey = 'my-flag-key';
 
-  it('sends a PUT request to the tags endpoint', async () => {
+  it('sends a PUT request to the tags endpoint using the flag key', async () => {
     mockFetch.mockResolvedValueOnce(ok(null));
-    await FeatBit.updateFlagTags(cfg, envId, flagId, ['PROJ-1', 'PROJ-2']);
+    await FeatBit.updateFlagTags(cfg, envId, flagKey, ['PROJ-1', 'PROJ-2']);
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
-      `http://localhost:5000/api/v1/envs/${envId}/feature-flags/${flagId}/tags`
+      `http://localhost:5000/api/v1/envs/${envId}/feature-flags/${flagKey}/tags`
     );
     expect(init.method).toBe('PUT');
   });
 
-  it('sends the full tags array in the request body', async () => {
+  it('sends the tags as a plain JSON array (not wrapped in an object)', async () => {
     mockFetch.mockResolvedValueOnce(ok(null));
-    await FeatBit.updateFlagTags(cfg, envId, flagId, ['PROJ-1', 'PROJ-2']);
+    await FeatBit.updateFlagTags(cfg, envId, flagKey, ['PROJ-1', 'PROJ-2']);
     const body = JSON.parse(
       (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string
-    ) as Record<string, unknown>;
-    expect(body).toEqual({ tags: ['PROJ-1', 'PROJ-2'] });
+    ) as unknown;
+    expect(body).toEqual(['PROJ-1', 'PROJ-2']);
   });
 
   it('resolves with undefined on success', async () => {
     mockFetch.mockResolvedValueOnce(ok(null));
     await expect(
-      FeatBit.updateFlagTags(cfg, envId, flagId, [])
+      FeatBit.updateFlagTags(cfg, envId, flagKey, [])
     ).resolves.toBeUndefined();
   });
 
   it('throws on a non-ok response', async () => {
     mockFetch.mockResolvedValueOnce(fail(404, 'Not Found'));
     await expect(
-      FeatBit.updateFlagTags(cfg, envId, flagId, [])
+      FeatBit.updateFlagTags(cfg, envId, flagKey, [])
     ).rejects.toThrow('FeatBit API 404: Not Found');
   });
 });

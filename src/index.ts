@@ -29,6 +29,9 @@ interface StoredEnvironment {
   id: string;
   key: string;
   name: string;
+  projectId: string;
+  projectName: string;
+  readOnly?: boolean;
 }
 
 interface StoredConfig {
@@ -140,7 +143,12 @@ resolver.define('fetchEnvironments', async (req) => {
     }
 
     const environments: StoredEnvironment[] = projects.flatMap(
-      (p: FeatBit.Project) => p.environments ?? []
+      (p: FeatBit.Project) =>
+        (p.environments ?? []).map((e) => ({
+          ...e,
+          projectId: p.id,
+          projectName: p.name,
+        }))
     );
     return { environments };
   } catch (err) {
@@ -214,7 +222,13 @@ resolver.define('getFlagsForIssue', async (req) => {
     })),
   }));
 
-  return { flags, environments: cfg.environments, portalUrl: cfg.portalUrl };
+  return {
+    flags,
+    environments: cfg.environments,
+    portalUrl: cfg.portalUrl,
+    canCreateFlag: cfg.defaultEnvId !== '__none__',
+    readOnlyEnvIds: cfg.environments.filter((e) => e.readOnly).map((e) => e.id),
+  };
 });
 
 // ── Flag search (for the "Link existing flag" modal) ─────────────────────────
@@ -224,20 +238,33 @@ resolver.define('searchFlags', async (req) => {
 
   const cfg = await loadConfig();
   if (!cfg) return { error: 'FeatBit is not configured.' };
+  if (cfg.environments.length === 0)
+    return { error: 'No environments configured.' };
 
-  const primaryEnv = cfg.environments[0];
-  if (!primaryEnv) return { error: 'No environments configured.' };
+  const featbitCfg = { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken };
 
-  try {
-    const flags = await FeatBit.searchFlags(
-      { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken },
-      primaryEnv.id,
-      query
-    );
-    return { flags };
-  } catch (err) {
-    return { error: String(err) };
+  // Search all environments and deduplicate by key so a flag is returned
+  // even if it only exists in a subset of environments.
+  const seen = new Map<string, FeatBit.FeatureFlag>();
+  const errors: string[] = [];
+  await Promise.all(
+    cfg.environments.map(async (env) => {
+      try {
+        const results = await FeatBit.searchFlags(featbitCfg, env.id, query);
+        for (const flag of results) {
+          if (!seen.has(flag.key)) seen.set(flag.key, flag);
+        }
+      } catch (err) {
+        errors.push(String(err));
+      }
+    })
+  );
+
+  if (seen.size === 0 && errors.length > 0) {
+    return { error: errors[0] };
   }
+
+  return { flags: Array.from(seen.values()) };
 });
 
 // ── Create a new flag ────────────────────────────────────────────────────────
@@ -252,6 +279,11 @@ resolver.define('createFlag', async (req) => {
 
   const cfg = await loadConfig();
   if (!cfg) return { error: 'FeatBit is not configured.' };
+  if (cfg.defaultEnvId === '__none__')
+    return {
+      error:
+        'Flag creation is disabled. Update the Default Environment setting to enable it.',
+    };
   if (cfg.environments.length === 0)
     return {
       error:
@@ -338,7 +370,7 @@ resolver.define('linkFlag', async (req) => {
 
         // Add the tag only if it isn't already present.
         if (!flag.tags.includes(issueKey)) {
-          await FeatBit.updateFlagTags(featbitCfg, env.id, flag.id, [
+          await FeatBit.updateFlagTags(featbitCfg, env.id, flag.key, [
             ...flag.tags,
             issueKey,
           ]);

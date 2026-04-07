@@ -86,8 +86,20 @@ const storedConfig = {
   apiUrl: 'http://featbit.local',
   accessToken: 'secret-token',
   environments: [
-    { id: 'env1', key: 'production', name: 'Production' },
-    { id: 'env2', key: 'staging', name: 'Staging' },
+    {
+      id: 'env1',
+      key: 'production',
+      name: 'Production',
+      projectId: 'p1',
+      projectName: 'Default',
+    },
+    {
+      id: 'env2',
+      key: 'staging',
+      name: 'Staging',
+      projectId: 'p1',
+      projectName: 'Default',
+    },
   ],
 };
 
@@ -228,9 +240,27 @@ describe('fetchEnvironments', () => {
       call('fetchEnvironments', { apiUrl: 'http://x', accessToken: 'tok' })
     ).resolves.toEqual({
       environments: [
-        { id: 'e1', key: 'prod', name: 'Production' },
-        { id: 'e2', key: 'dev', name: 'Dev' },
-        { id: 'e3', key: 'staging', name: 'Staging' },
+        {
+          id: 'e1',
+          key: 'prod',
+          name: 'Production',
+          projectId: 'p1',
+          projectName: 'Project Alpha',
+        },
+        {
+          id: 'e2',
+          key: 'dev',
+          name: 'Dev',
+          projectId: 'p1',
+          projectName: 'Project Alpha',
+        },
+        {
+          id: 'e3',
+          key: 'staging',
+          name: 'Staging',
+          projectId: 'p2',
+          projectName: 'Project Beta',
+        },
       ],
     });
   });
@@ -332,9 +362,16 @@ describe('getFlagsForIssue', () => {
   });
 
   it('merges flags across environments into correctly shaped rows', async () => {
+    const singleEnv = {
+      id: 'env1',
+      key: 'prod',
+      name: 'Production',
+      projectId: 'p1',
+      projectName: 'Default',
+    };
     mockKvsGet.mockResolvedValueOnce({
       ...storedConfig,
-      environments: [{ id: 'env1', key: 'prod', name: 'Production' }],
+      environments: [singleEnv],
     });
     const flag = makeFlag({ isEnabled: true, tags: ['PROJ-1'] });
     mockFeatBit.listFlagsByTag.mockResolvedValue([flag]);
@@ -354,15 +391,21 @@ describe('getFlagsForIssue', () => {
       name: 'My Flag',
       environments: [{ envId: 'env1', isEnabled: true }],
     });
-    expect(result.environments).toEqual([
-      { id: 'env1', key: 'prod', name: 'Production' },
-    ]);
+    expect(result.environments).toEqual([singleEnv]);
   });
 
   it('de-duplicates flags that appear under multiple tags', async () => {
     mockKvsGet.mockResolvedValueOnce({
       ...storedConfig,
-      environments: [{ id: 'env1', key: 'prod', name: 'Production' }],
+      environments: [
+        {
+          id: 'env1',
+          key: 'prod',
+          name: 'Production',
+          projectId: 'p1',
+          projectName: 'Default',
+        },
+      ],
     });
     mockApi.asApp.mockReturnValue({
       requestJira: jest.fn().mockResolvedValue({
@@ -405,26 +448,49 @@ describe('searchFlags', () => {
     expect(result.error).toMatch(/no environments/i);
   });
 
-  it('searches using the primary (first) environment', async () => {
+  it('searches all environments and deduplicates by key', async () => {
     mockKvsGet.mockResolvedValueOnce(storedConfig);
     const flags = [makeFlag({ name: 'Beta Feature', key: 'beta-feature' })];
+    // env1 returns the flag; env2 returns the same flag (duplicate)
+    mockFeatBit.searchFlags.mockResolvedValueOnce(flags);
     mockFeatBit.searchFlags.mockResolvedValueOnce(flags);
 
     const result = (await call('searchFlags', { query: 'beta' })) as {
       flags: unknown[];
     };
 
+    expect(mockFeatBit.searchFlags).toHaveBeenCalledTimes(2);
     expect(mockFeatBit.searchFlags).toHaveBeenCalledWith(
       expect.anything(),
       'env1',
       'beta'
     );
+    expect(mockFeatBit.searchFlags).toHaveBeenCalledWith(
+      expect.anything(),
+      'env2',
+      'beta'
+    );
+    // Deduplicated — only one entry despite matching in both envs
+    expect(result.flags).toHaveLength(1);
     expect(result.flags).toEqual(flags);
   });
 
-  it('returns { error } when the FeatBit client throws', async () => {
+  it('returns a flag found only in a non-primary environment', async () => {
     mockKvsGet.mockResolvedValueOnce(storedConfig);
-    mockFeatBit.searchFlags.mockRejectedValueOnce(new Error('Network error'));
+    const flags = [makeFlag({ name: 'Beta Feature', key: 'beta-feature' })];
+    // env1 returns nothing; env2 has the flag
+    mockFeatBit.searchFlags.mockResolvedValueOnce([]);
+    mockFeatBit.searchFlags.mockResolvedValueOnce(flags);
+
+    const result = (await call('searchFlags', { query: 'beta' })) as {
+      flags: unknown[];
+    };
+    expect(result.flags).toEqual(flags);
+  });
+
+  it('returns { error } when ALL environments throw', async () => {
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
+    mockFeatBit.searchFlags.mockRejectedValue(new Error('Network error'));
     const result = (await call('searchFlags', { query: 'x' })) as {
       error: string;
     };
@@ -519,7 +585,7 @@ describe('linkFlag', () => {
     expect(mockFeatBit.updateFlagTags).toHaveBeenCalledWith(
       expect.anything(),
       'env1',
-      'flag-id',
+      'existing-flag',
       ['PROJ-1']
     );
     expect(result.results.every((r) => r.success)).toBe(true);

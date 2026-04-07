@@ -4,6 +4,9 @@ export interface Environment {
   id: string;
   key: string;
   name: string;
+  projectId: string;
+  projectName: string;
+  readOnly?: boolean;
 }
 
 /** The status of a flag in one environment */

@@ -5,6 +5,24 @@
   --animate-fade-out: fade-out 200ms ease-in forwards;
 }
 
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-selected: var(--surface-selected);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-link: var(--link);
+  --color-success-bg: var(--success-bg);
+  --color-success: var(--success);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger: var(--danger);
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -24,10 +42,48 @@
 }
 
 @layer base {
+  :root {
+    --canvas: #1d2125;
+    --surface: #22272b;
+    --surface-raised: #282e33;
+    --surface-overlay: #2c333a;
+    --surface-selected: #1c2b42;
+    --border: #454f59;
+    --text: #b6c2cf;
+    --text-subtle: #8c9bab;
+    --text-muted: #626f86;
+    --accent: #0c66e4;
+    --link: #579dff;
+    --success-bg: #1c3329;
+    --success: #4bce97;
+    --danger-bg: #3d1508;
+    --danger: #f15b50;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --canvas: #ffffff;
+      --surface: #f7f8f9;
+      --surface-raised: #f1f2f4;
+      --surface-overlay: #ebecf0;
+      --surface-selected: #e9f2ff;
+      --border: #dfe1e6;
+      --text: #172b4d;
+      --text-subtle: #44546f;
+      --text-muted: #626f86;
+      --accent: #0c66e4;
+      --link: #0c66e4;
+      --success-bg: #dcfff1;
+      --success: #216e4e;
+      --danger-bg: #ffebe6;
+      --danger: #ae2a19;
+    }
+  }
+
   html,
   body,
   #root {
-    background-color: #1d2125;
-    color: #b6c2cf;
+    background-color: var(--canvas);
+    color: var(--text);
   }
 }

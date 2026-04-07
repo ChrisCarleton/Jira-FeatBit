@@ -83,16 +83,14 @@ function handleKeyDown(e: KeyboardEvent) {
     @click="emit('close')"
   >
     <div
-      class="bg-[#282E33] rounded w-[440px] max-w-[90vw] p-6 shadow-xl"
+      class="bg-surface-raised rounded w-[440px] max-w-[90vw] p-6 shadow-xl"
       @click.stop
       @keydown="handleKeyDown"
       role="dialog"
       aria-modal="true"
     >
-      <h2 class="text-base font-bold text-[#B6C2CF] mb-4">
-        Create feature flag
-      </h2>
-      <p class="text-xs text-[#8C9BAB] mb-4">
+      <h2 class="text-base font-bold text-text mb-4">Create feature flag</h2>
+      <p class="text-xs text-text-subtle mb-4">
         The flag will be created in all configured environments and tagged with
         <strong>{{ issueKey }}</strong
         >.
@@ -100,40 +98,40 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <div
         v-if="error"
-        class="px-3 py-2 bg-[#3D1508] border border-[#F15B50] rounded text-sm text-[#F15B50] mb-3"
+        class="px-3 py-2 bg-danger-bg border border-danger rounded text-sm text-danger mb-3"
       >
         {{ error }}
       </div>
 
-      <label class="block text-xs font-semibold text-[#8C9BAB] mb-1"
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Flag name</label
       >
       <input
         ref="nameInput"
-        class="w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF] mb-3"
+        class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3"
         type="text"
         :value="name"
         @input="handleNameChange(($event.target as HTMLInputElement).value)"
         placeholder="e.g. My New Feature"
       />
 
-      <label class="block text-xs font-semibold text-[#8C9BAB] mb-1"
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Flag key</label
       >
       <input
-        class="w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF] mb-3"
+        class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3"
         type="text"
         :value="key"
         @input="handleKeyChange(($event.target as HTMLInputElement).value)"
         placeholder="e.g. my-new-feature"
       />
 
-      <label class="block text-xs font-semibold text-[#8C9BAB] mb-1"
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Description
-        <span class="font-normal text-[#626F86]">(optional)</span></label
+        <span class="font-normal text-text-muted">(optional)</span></label
       >
       <textarea
-        class="w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF] mb-3 resize-none"
+        class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3 resize-none"
         rows="2"
         v-model="description"
         placeholder="What does this flag control?"
@@ -141,14 +139,14 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <div class="flex justify-end gap-2 mt-2">
         <button
-          class="px-4 py-1.5 bg-[#2C333A] text-[#B6C2CF] border border-[#454F59] rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+          class="px-4 py-1.5 bg-surface-overlay text-text border border-border rounded text-sm font-medium cursor-pointer disabled:opacity-50"
           @click="emit('close')"
           :disabled="submitting"
         >
           Cancel
         </button>
         <button
-          class="px-4 py-1.5 bg-[#0C66E4] text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+          class="px-4 py-1.5 bg-accent text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
           @click="handleSubmit"
           :disabled="submitting"
         >

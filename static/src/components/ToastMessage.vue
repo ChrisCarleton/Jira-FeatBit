@@ -12,8 +12,8 @@ defineProps<{
     class="px-3 py-2 rounded-lg text-xs mb-3"
     :class="[
       variant === 'error'
-        ? 'bg-[#3D1508] border border-[#F15B50] text-[#F15B50]'
-        : 'bg-[#1C3329] border border-[#4BCE97] text-[#4BCE97]',
+        ? 'bg-danger-bg border border-danger text-danger'
+        : 'bg-success-bg border border-success text-success',
       fading ? 'animate-fade-out' : 'animate-fade-in',
     ]"
     role="status"

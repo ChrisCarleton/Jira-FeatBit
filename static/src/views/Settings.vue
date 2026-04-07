@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { fetchEnvironments, getConfig, saveConfig } from '../api';
 import type { Environment } from '../types';
 import ToastMessage from '../components/ToastMessage.vue';
@@ -95,18 +95,39 @@ function handleEnvNameChange(id: string, name: string) {
   );
 }
 
+function handleEnvReadOnlyChange(id: string, readOnly: boolean) {
+  environments.value = environments.value.map((e) =>
+    e.id === id ? { ...e, readOnly } : e
+  );
+}
+
+const projectGroups = computed(() => {
+  const groups = new Map<
+    string,
+    { projectName: string; envs: Environment[] }
+  >();
+  for (const env of environments.value) {
+    const pid = env.projectId ?? '';
+    if (!groups.has(pid)) {
+      groups.set(pid, { projectName: env.projectName ?? pid, envs: [] });
+    }
+    groups.get(pid)!.envs.push(env);
+  }
+  return Array.from(groups.values());
+});
+
 const inputCls =
-  'w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF] mb-3';
+  'w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3';
 </script>
 
 <template>
   <div class="p-5 max-w-xl">
-    <h1 class="text-lg font-bold text-[#B6C2CF] mb-5">FeatBit Settings</h1>
+    <h1 class="text-lg font-bold text-text mb-5">FeatBit Settings</h1>
 
     <div class="mb-6">
-      <h2 class="text-sm font-semibold text-[#B6C2CF] mb-2">Connection</h2>
+      <h2 class="text-sm font-semibold text-text mb-2">Connection</h2>
 
-      <label class="block text-xs font-semibold text-[#8C9BAB] mb-1"
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
         >API Base URL</label
       >
       <input
@@ -116,7 +137,7 @@ const inputCls =
         placeholder="https://your-featbit-instance.com:5000"
       />
 
-      <label class="block text-xs font-semibold text-[#8C9BAB] mb-1"
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Access Token</label
       >
       <input
@@ -126,9 +147,9 @@ const inputCls =
         :placeholder="tokenPlaceholder"
       />
 
-      <label class="block text-xs font-semibold text-[#8C9BAB] mb-1"
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Portal URL
-        <span class="font-normal text-[#626F86]"
+        <span class="font-normal text-text-muted"
           >(optional — used for flag links)</span
         ></label
       >
@@ -140,7 +161,7 @@ const inputCls =
       />
 
       <button
-        class="px-4 py-1.5 bg-[#2C333A] text-[#B6C2CF] border border-[#454F59] rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+        class="px-4 py-1.5 bg-surface-overlay text-text border border-border rounded text-sm font-medium cursor-pointer disabled:opacity-50"
         @click="handleFetchEnvs"
         :disabled="fetching"
       >
@@ -150,7 +171,7 @@ const inputCls =
 
     <div
       v-if="fetchError"
-      class="px-3.5 py-2.5 bg-[#3D1508] border border-[#F15B50] rounded-lg text-xs text-[#F15B50] mb-3 animate-fade-in"
+      class="px-3.5 py-2.5 bg-danger-bg border border-danger rounded-lg text-xs text-danger mb-3 animate-fade-in"
     >
       {{ fetchError }}
     </div>
@@ -161,75 +182,120 @@ const inputCls =
     />
 
     <div v-if="environments.length > 0" class="mb-6">
-      <h2 class="text-sm font-semibold text-[#B6C2CF] mb-2">
+      <h2 class="text-sm font-semibold text-text mb-2">
         Environments ({{ environments.length }} found)
       </h2>
-      <p class="text-xs text-[#8C9BAB] mb-2">
+      <p class="text-xs text-text-subtle mb-2">
         Rename environments if you'd like a shorter display name in the issue
-        panel.
+        panel. Mark an environment as <strong>Read-only</strong> to prevent
+        toggling flags from within Jira.
       </p>
       <table class="w-full border-collapse mt-2">
         <thead>
           <tr>
             <th
-              class="text-left px-2 py-1.5 text-xs font-semibold text-[#8C9BAB] border-b-2 border-[#454F59]"
+              class="text-left px-2 py-1.5 text-xs font-semibold text-text-subtle border-b-2 border-border"
             >
               Display Name
             </th>
             <th
-              class="text-left px-2 py-1.5 text-xs font-semibold text-[#8C9BAB] border-b-2 border-[#454F59]"
+              class="text-left px-2 py-1.5 text-xs font-semibold text-text-subtle border-b-2 border-border"
             >
               Key
             </th>
             <th
-              class="text-left px-2 py-1.5 text-xs font-semibold text-[#8C9BAB] border-b-2 border-[#454F59]"
+              class="text-left px-2 py-1.5 text-xs font-semibold text-text-subtle border-b-2 border-border"
             >
               ID
+            </th>
+            <th
+              class="text-center px-2 py-1.5 text-xs font-semibold text-text-subtle border-b-2 border-border"
+            >
+              Read-only
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="env in environments" :key="env.id">
-            <td
-              class="px-2 py-1.5 text-sm border-b border-[#2C333A] text-[#B6C2CF]"
-            >
-              <input
-                class="w-full px-2.5 py-1.5 bg-[#22272B] border-2 border-[#454F59] rounded text-sm text-[#B6C2CF] outline-none focus:border-[#579DFF]"
-                :value="env.name"
-                @input="
-                  handleEnvNameChange(
-                    env.id,
-                    ($event.target as HTMLInputElement).value
-                  )
-                "
-              />
-            </td>
-            <td
-              class="px-2 py-1.5 text-sm border-b border-[#2C333A] text-[#B6C2CF]"
-            >
-              <code class="text-xs">{{ env.key }}</code>
-            </td>
-            <td class="px-2 py-1.5 text-sm border-b border-[#2C333A]">
-              <code class="text-[11px] text-[#8C9BAB]">{{ env.id }}</code>
-            </td>
-          </tr>
+          <template v-for="group in projectGroups" :key="group.projectName">
+            <tr v-if="projectGroups.length > 1">
+              <td
+                colspan="4"
+                class="px-2 py-1 text-[11px] font-bold text-text-subtle uppercase tracking-wider bg-surface-overlay border-b border-border"
+              >
+                {{ group.projectName }}
+              </td>
+            </tr>
+            <tr v-for="env in group.envs" :key="env.id">
+              <td
+                class="px-2 py-1.5 text-sm border-b border-surface-overlay text-text"
+              >
+                <input
+                  class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link"
+                  :value="env.name"
+                  @input="
+                    handleEnvNameChange(
+                      env.id,
+                      ($event.target as HTMLInputElement).value
+                    )
+                  "
+                />
+              </td>
+              <td
+                class="px-2 py-1.5 text-sm border-b border-surface-overlay text-text"
+              >
+                <code class="text-xs">{{ env.key }}</code>
+              </td>
+              <td class="px-2 py-1.5 text-sm border-b border-surface-overlay">
+                <code class="text-[11px] text-text-subtle">{{ env.id }}</code>
+              </td>
+              <td
+                class="px-2 py-1.5 text-sm border-b border-surface-overlay text-center"
+              >
+                <input
+                  type="checkbox"
+                  class="accent-link w-4 h-4 cursor-pointer"
+                  :checked="!!env.readOnly"
+                  @change="
+                    handleEnvReadOnlyChange(
+                      env.id,
+                      ($event.target as HTMLInputElement).checked
+                    )
+                  "
+                />
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
 
     <div v-if="environments.length > 0" class="mb-6">
-      <h2 class="text-sm font-semibold text-[#B6C2CF] mb-2">
-        Default Environment
-      </h2>
-      <p class="text-xs text-[#8C9BAB] mb-2">
-        New flags will be created in this environment. If none is selected,
-        flags are created in all environments.
+      <h2 class="text-sm font-semibold text-text mb-2">Default Environment</h2>
+      <p class="text-xs text-text-subtle mb-2">
+        Controls where new flags are created from the Jira issue panel. Choose
+        <em>All environments</em> to create in every configured environment, a
+        specific environment to create only there, or <em>None</em> to disable
+        flag creation entirely.
       </p>
       <select :class="inputCls" v-model="defaultEnvId">
         <option value="">— All environments —</option>
-        <option v-for="env in environments" :key="env.id" :value="env.id">
-          {{ env.name }}
-        </option>
+        <option value="__none__">— None (disable flag creation) —</option>
+        <template v-if="projectGroups.length === 1">
+          <option v-for="env in environments" :key="env.id" :value="env.id">
+            {{ env.name }}
+          </option>
+        </template>
+        <template v-else>
+          <optgroup
+            v-for="group in projectGroups"
+            :key="group.projectName"
+            :label="group.projectName"
+          >
+            <option v-for="env in group.envs" :key="env.id" :value="env.id">
+              {{ env.name }}
+            </option>
+          </optgroup>
+        </template>
       </select>
     </div>
 
@@ -239,7 +305,7 @@ const inputCls =
     />
 
     <button
-      class="px-4 py-1.5 bg-[#0C66E4] text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+      class="px-4 py-1.5 bg-accent text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
       @click="handleSave"
       :disabled="saving"
     >
