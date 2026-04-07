@@ -36,4 +36,6 @@ export interface StoredConfig {
   apiUrl: string;
   hasToken: boolean;
   environments: Environment[];
+  defaultEnvId?: string;
+  portalUrl?: string;
 }

@@ -12,6 +12,8 @@ export async function saveConfig(payload: {
   apiUrl: string;
   accessToken: string;
   environments: Environment[];
+  defaultEnvId?: string;
+  portalUrl?: string;
 }): Promise<{ success: boolean }> {
   return invoke('saveConfig', payload);
 }
@@ -30,6 +32,7 @@ export async function fetchEnvironments(payload: {
 export async function getFlagsForIssue(issueKey: string): Promise<{
   flags?: FlagRow[];
   environments?: Environment[];
+  portalUrl?: string;
   error?: string;
 }> {
   return invoke('getFlagsForIssue', { issueKey });
@@ -49,6 +52,7 @@ export async function createFlag(payload: {
   issueKey: string;
   name: string;
   key: string;
+  description?: string;
 }): Promise<{
   results?: Array<{ envName: string; success: boolean; error?: string }>;
   error?: string;
@@ -64,4 +68,12 @@ export async function linkFlag(payload: {
   error?: string;
 }> {
   return invoke('linkFlag', payload);
+}
+
+export async function toggleFlag(payload: {
+  envId: string;
+  flagKey: string;
+  enable: boolean;
+}): Promise<{ success?: boolean; error?: string }> {
+  return invoke('toggleFlag', payload);
 }

@@ -9,7 +9,7 @@ FeatBit flags are linked to Jira tickets using **FeatBit tags**. When a flag is 
 The app consists of two parts:
 
 - **Forge backend** (`src/`) — TypeScript resolver functions that run server-side inside Atlassian's infrastructure. They call the FeatBit REST API and use Forge Storage to persist configuration. The FeatBit access token is stored here and never sent to the browser.
-- **Custom UI frontend** (`static/`) — A React app served by Forge. It calls the backend resolvers via `@forge/bridge`. It renders as either the issue panel or the settings page depending on which Forge module loaded it.
+- **Custom UI frontend** (`static/`) — A Vue app served by Forge. It calls the backend resolvers via `@forge/bridge`. It renders as either the issue panel or the settings page depending on which Forge module loaded it.
 
 ```
 Browser (Jira)
@@ -42,23 +42,23 @@ featbit-jira/
 │   ├── featbit.test.ts       # Unit tests for the FeatBit API client
 │   └── index.test.ts         # Unit tests for all Forge resolver handlers
 │
-└── static/                   # Custom UI (React + Vite)
+└── static/                   # Custom UI (Vue + Vite)
     ├── index.html
     ├── package.json
     ├── tsconfig.json
     ├── vite.config.ts
     └── src/
-        ├── main.tsx          # React entry point
-        ├── App.tsx           # Renders IssuePanel or Settings based on moduleKey
+        ├── main.ts           # Vue entry point
+        ├── App.vue           # Renders IssuePanel or Settings based on moduleKey
         ├── api.ts            # Typed invoke() wrappers (bridge → resolver)
         ├── types.ts          # Shared TypeScript interfaces
         ├── views/
-        │   ├── IssuePanel.tsx   # Panel shown on every Jira issue
-        │   └── Settings.tsx     # Global settings page
+        │   ├── IssuePanel.vue   # Panel shown on every Jira issue
+        │   └── Settings.vue     # Global settings page
         └── components/
-            ├── FlagTable.tsx        # Multi-environment flag status table
-            ├── CreateFlagModal.tsx  # Create a new flag modal
-            └── LinkFlagModal.tsx    # Search and link an existing flag modal
+            ├── FlagTable.vue        # Multi-environment flag status table
+            ├── CreateFlagModal.vue  # Create a new flag modal
+            └── LinkFlagModal.vue    # Search and link an existing flag modal
 ```
 
 ## Forge modules
@@ -68,7 +68,7 @@ featbit-jira/
 | `jira:issuePanel` | `featbit-flags-panel` | Shown on every Jira issue. Displays linked flags.                                     |
 | `jira:globalPage` | `featbit-settings`    | Admin page for entering the FeatBit API URL, access token and selecting environments. |
 
-Both modules share the same React app entry point (`static/dist`). `App.tsx` reads `ctx.moduleKey` from the Forge context to decide which view to render.
+Both modules share the same Vue app entry point (`static/dist`). `App.vue` reads `ctx.moduleKey` from the Forge context to decide which view to render.
 
 ## Resolver functions
 
@@ -180,24 +180,21 @@ forge install        # install in your Jira cloud site
 
 ### 5. Create a FeatBit access token
 
-The app authenticates with the FeatBit API using a **Service** token. To create one:
+The app authenticates with the FeatBit management API using a **Service Access Token**.
+
+To create one:
 
 1. In the FeatBit Admin UI, go to **Integrations → Access Tokens** and click **Add**.
-2. Set **Type** to `Service`.
-3. Under **Permissions**, enable the following and leave everything else unchecked:
+2. Give it a descriptive name (e.g. `jira-integration`) and set **Type** to `Service`.
+3. Assign the following permissions:
 
-   | Section      | Setting          | Value            |
-   | ------------ | ---------------- | ---------------- |
-   | Feature flag | Resources        | All resources    |
-   |              | Actions (`*`)    | ✅ (all actions) |
-   | Project      | Resources        | All resources    |
-   |              | CanAccessProject | ✅               |
-   | Environment  | Resources        | All resources    |
-   |              | CanAccessEnv     | ✅               |
+   | Resource         | Permissions required               |
+   | ---------------- | ---------------------------------- |
+   | **Feature flag** | All resources — full access (`*`)  |
+   | **Project**      | All resources — `CanAccessProject` |
+   | **Environment**  | All resources — `CanAccessEnv`     |
 
 4. Click **Save** and copy the generated token — it will not be shown again.
-
-> The token needs feature-flag read/write access to create flags and update tags, plus `CanAccessProject` and `CanAccessEnv` so it can discover projects and environments during the settings step.
 
 ### 6. Configure the app in Jira
 
@@ -208,7 +205,19 @@ The app authenticates with the FeatBit API using a **Service** token. To create 
 
 ## Development workflow
 
-### Backend changes
+### Both at once (recommended)
+
+`yarn build:watch` runs the backend webpack watcher and frontend Vite build watcher in parallel:
+
+```bash
+# Terminal 1 — rebuild both on change
+yarn build:watch
+
+# Terminal 2 — tunnel (proxies Forge invocations to your local process)
+forge tunnel
+```
+
+### Backend only
 
 Edit files in `src/`, then:
 
@@ -216,20 +225,20 @@ Edit files in `src/`, then:
 yarn build && forge deploy
 ```
 
-Or, for a faster iteration loop with live tunnelling:
+Or watch mode for the backend alone:
 
 ```bash
-# Terminal 1 — rebuild on change
-yarn build --watch
+# Terminal 1 — rebuild backend on change
+webpack --config webpack.config.cjs --watch
 
-# Terminal 2 — tunnel (proxies Forge invocations to your local process)
+# Terminal 2
 forge tunnel
 ```
 
-### Frontend changes
+### Frontend only
 
 ```bash
-# Terminal 1 — Vite dev server on :3000
+# Terminal 1 — Vite dev server on :3000 (hot-reload)
 cd static && yarn dev
 
 # Terminal 2 — tunnel with Custom UI port forwarding
@@ -238,10 +247,10 @@ forge tunnel
 
 Forge tunnel proxies the Custom UI resource to `localhost:3000` during development, so hot-reload works normally.
 
-### After frontend changes are ready for deployment
+### After changes are ready for deployment
 
 ```bash
-cd static && yarn build && cd ..
+yarn build
 forge deploy
 ```
 
@@ -249,8 +258,10 @@ forge deploy
 
 | Command                     | What it does                                  |
 | --------------------------- | --------------------------------------------- |
-| `yarn build`                | Compile backend TypeScript                    |
-| `yarn test`                 | Run the backend unit test suite               |
+| `yarn build`                | Compile backend TypeScript and frontend       |
+| `yarn build:watch`          | Watch and rebuild both backend and frontend   |
+| `yarn build:ui:watch`       | Watch and rebuild frontend only               |
+| `yarn test`                 | Run all unit tests (backend + frontend)       |
 | `yarn lint`                 | ESLint the backend source                     |
 | `yarn lint:fix`             | Auto-fix lint issues                          |
 | `yarn format`               | Prettier-format backend source                |
@@ -261,11 +272,6 @@ forge deploy
 | `forge tunnel`              | Proxy Forge invocations to your local machine |
 | `forge logs`                | Stream live logs from the deployed app        |
 | `cd static && yarn dev`     | Start Vite dev server for the frontend        |
-| `cd static && yarn build`   | Build the frontend for deployment             |
-
-- `src/index.ts` - Main resolver functions
-- `manifest.yml` - Forge app configuration
-- `tsconfig.json` - TypeScript configuration
 
 ## Testing
 

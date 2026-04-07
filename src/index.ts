@@ -35,6 +35,8 @@ interface StoredConfig {
   apiUrl: string;
   accessToken: string;
   environments: StoredEnvironment[];
+  defaultEnvId?: string;
+  portalUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,16 +86,34 @@ resolver.define('getConfig', async () => {
     apiUrl: cfg.apiUrl,
     hasToken: Boolean(cfg.accessToken),
     environments: cfg.environments,
+    defaultEnvId: cfg.defaultEnvId,
+    portalUrl: cfg.portalUrl,
   };
 });
 
 resolver.define('saveConfig', async (req) => {
-  const { apiUrl, accessToken, environments } = req.payload as {
-    apiUrl: string;
-    accessToken: string;
-    environments: StoredEnvironment[];
-  };
-  await kvs.set('featbit-config', { apiUrl, accessToken, environments });
+  const { apiUrl, accessToken, environments, defaultEnvId, portalUrl } =
+    req.payload as {
+      apiUrl: string;
+      accessToken: string;
+      environments: StoredEnvironment[];
+      defaultEnvId?: string;
+      portalUrl?: string;
+    };
+  // If no token was submitted (user left the field blank to keep the saved one),
+  // preserve the previously stored token instead of overwriting it with ''.
+  let tokenToStore = accessToken;
+  if (!tokenToStore) {
+    const existing = await loadConfig();
+    tokenToStore = existing?.accessToken ?? '';
+  }
+  await kvs.set('featbit-config', {
+    apiUrl,
+    accessToken: tokenToStore,
+    environments,
+    defaultEnvId: defaultEnvId ?? '',
+    portalUrl: portalUrl ?? '',
+  });
   return { success: true };
 });
 
@@ -109,7 +129,16 @@ resolver.define('fetchEnvironments', async (req) => {
     accessToken = stored?.accessToken ?? '';
   }
   try {
-    const projects = await FeatBit.listProjects({ apiUrl, accessToken });
+    const featbitCfg: FeatBit.FeatBitConfig = { apiUrl, accessToken };
+    const projects = await FeatBit.listProjects(featbitCfg);
+
+    if (projects.length === 0) {
+      return {
+        error:
+          'No projects returned from the FeatBit API. Verify that: (1) the API URL points to the management API (e.g. port 5000 or your hosted API server), not the evaluation server; and (2) your access token has access to at least one project.',
+      };
+    }
+
     const environments: StoredEnvironment[] = projects.flatMap(
       (p: FeatBit.Project) => p.environments ?? []
     );
@@ -185,7 +214,7 @@ resolver.define('getFlagsForIssue', async (req) => {
     })),
   }));
 
-  return { flags, environments: cfg.environments };
+  return { flags, environments: cfg.environments, portalUrl: cfg.portalUrl };
 });
 
 // ── Flag search (for the "Link existing flag" modal) ─────────────────────────
@@ -214,10 +243,11 @@ resolver.define('searchFlags', async (req) => {
 // ── Create a new flag ────────────────────────────────────────────────────────
 
 resolver.define('createFlag', async (req) => {
-  const { issueKey, name, key } = req.payload as {
+  const { issueKey, name, key, description } = req.payload as {
     issueKey: string;
     name: string;
     key: string;
+    description?: string;
   };
 
   const cfg = await loadConfig();
@@ -231,10 +261,30 @@ resolver.define('createFlag', async (req) => {
   const featbitCfg = { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken };
   const tags = [issueKey];
 
+  // If a default environment is configured, create only in that environment.
+  const envsToCreate = cfg.defaultEnvId
+    ? cfg.environments.filter((e) => e.id === cfg.defaultEnvId)
+    : cfg.environments;
+
+  if (envsToCreate.length === 0) {
+    return {
+      error: cfg.defaultEnvId
+        ? 'The configured default environment was not found. Please re-save your settings.'
+        : 'No environments configured. Open FeatBit Settings and run "Test connection & load environments" first.',
+    };
+  }
+
   const results = await Promise.all(
-    cfg.environments.map(async (env) => {
+    envsToCreate.map(async (env) => {
       try {
-        await FeatBit.createFlag(featbitCfg, env.id, name, key, tags);
+        await FeatBit.createFlag(
+          featbitCfg,
+          env.id,
+          name,
+          key,
+          tags,
+          description ?? ''
+        );
         return { envId: env.id, envName: env.name, success: true };
       } catch (err) {
         return {
@@ -307,6 +357,31 @@ resolver.define('linkFlag', async (req) => {
   );
 
   return { results };
+});
+
+// ── Toggle a flag on/off in one environment ──────────────────────────────────
+
+resolver.define('toggleFlag', async (req) => {
+  const { envId, flagKey, enable } = req.payload as {
+    envId: string;
+    flagKey: string;
+    enable: boolean;
+  };
+
+  const cfg = await loadConfig();
+  if (!cfg) return { error: 'FeatBit is not configured.' };
+
+  try {
+    await FeatBit.toggleFlag(
+      { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken },
+      envId,
+      flagKey,
+      enable
+    );
+    return { success: true };
+  } catch (err) {
+    return { error: String(err) };
+  }
 });
 
 export const handler = resolver.getDefinitions();

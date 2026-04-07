@@ -2,6 +2,8 @@
 // All calls are made server-side from Forge resolver functions so the access
 // token never leaves the Forge backend.
 
+import { v7 as uuidv7 } from 'uuid';
+
 export interface FeatBitConfig {
   apiUrl: string;
   accessToken: string;
@@ -38,11 +40,12 @@ export interface FlagListResponse {
 }
 
 function headers(accessToken: string): Record<string, string> {
+  // Strip any accidental 'Bearer ' prefix the user may have pasted.
+  // The FeatBit management API expects the raw token with no scheme prefix:
+  //   Authorization: <token>
+  const raw = accessToken.replace(/^Bearer\s+/i, '');
   return {
-    // FeatBit's OpenApiHandler reads Request.Headers.Authorization verbatim and
-    // compares it to the stored token value (e.g. "api-xxx"). Sending a "Bearer"
-    // scheme prefix would cause the lookup to fail. Pass the raw token directly.
-    Authorization: accessToken,
+    Authorization: raw,
     'Content-Type': 'application/json',
     // Bypass the ngrok browser-warning interstitial page on free-tier tunnels.
     // Ignored by non-ngrok servers.
@@ -60,19 +63,61 @@ async function safeFetch(url: string, opts: RequestInit): Promise<Response> {
   }
 }
 
-/** Return all projects with their embedded environments. */
+/**
+ * Return all projects with their environments populated.
+ *
+ * Some FeatBit versions embed environments directly in the project list
+ * response; others require a separate GET /api/v1/envs?projectKey=… call.
+ * This function handles both cases transparently.
+ */
 export async function listProjects(config: FeatBitConfig): Promise<Project[]> {
-  const res = await safeFetch(`${config.apiUrl}/api/v1/projects`, {
-    headers: headers(config.accessToken),
-  });
+  const params = new URLSearchParams({ pageIndex: '0', pageSize: '100' });
+  const res = await safeFetch(
+    `${config.apiUrl}/api/v1/projects?${params.toString()}`,
+    { headers: headers(config.accessToken) }
+  );
   if (!res.ok) {
     throw new Error(`FeatBit API ${res.status}: ${await res.text()}`);
   }
-  const data: unknown = await res.json();
-  // Response is either { items: Project[] } or Project[]
-  if (Array.isArray(data)) return data as Project[];
-  const obj = data as { items?: Project[] };
-  return obj.items ?? [];
+  const envelope = (await res.json()) as {
+    success?: boolean;
+    data?: unknown;
+    items?: Project[];
+  };
+  // Unwrap the standard FeatBit response envelope: { success, errors, data }
+  // The inner data is either a Project[] directly or a paged { items: Project[] }.
+  const inner: unknown = envelope.data ?? envelope;
+  const projects: Project[] = Array.isArray(inner)
+    ? (inner as Project[])
+    : ((inner as { items?: Project[] }).items ?? []);
+
+  // If the API already embedded environments in at least one project, trust
+  // the embedded data (an empty array means no envs configured there).
+  const embedsEnvironments = projects.some((p) => p.environments !== undefined);
+  if (embedsEnvironments) return projects;
+
+  // Otherwise the API doesn't embed environments — fetch them per-project.
+  await Promise.all(
+    projects.map(async (p) => {
+      const envParams = new URLSearchParams({
+        projectKey: p.key,
+        pageIndex: '0',
+        pageSize: '100',
+      });
+      const envRes = await safeFetch(
+        `${config.apiUrl}/api/v1/envs?${envParams.toString()}`,
+        { headers: headers(config.accessToken) }
+      );
+      if (!envRes.ok) return; // not all versions expose this endpoint
+      const envData: unknown = await envRes.json();
+      const envs: Environment[] = Array.isArray(envData)
+        ? (envData as Environment[])
+        : ((envData as { items?: Environment[] }).items ?? []);
+      p.environments = envs;
+    })
+  );
+
+  return projects;
 }
 
 /** List feature flags in a given environment, filtered by a single tag. */
@@ -94,8 +139,11 @@ export async function listFlagsByTag(
   if (!res.ok) {
     throw new Error(`FeatBit API ${res.status}: ${await res.text()}`);
   }
-  const data = (await res.json()) as FlagListResponse;
-  return data.items ?? [];
+  const envelope = (await res.json()) as {
+    data?: FlagListResponse;
+  } & FlagListResponse;
+  const inner = envelope.data ?? envelope;
+  return inner.items ?? [];
 }
 
 /** Full-text search for flags (by name or key) in a given environment. */
@@ -117,8 +165,11 @@ export async function searchFlags(
   if (!res.ok) {
     throw new Error(`FeatBit API ${res.status}: ${await res.text()}`);
   }
-  const data = (await res.json()) as FlagListResponse;
-  return data.items ?? [];
+  const envelope = (await res.json()) as {
+    data?: FlagListResponse;
+  } & FlagListResponse;
+  const inner = envelope.data ?? envelope;
+  return inner.items ?? [];
 }
 
 /**
@@ -130,22 +181,26 @@ export async function createFlag(
   envId: string,
   name: string,
   key: string,
-  tags: string[]
+  tags: string[],
+  description = ''
 ): Promise<FeatureFlag> {
+  // Variation IDs must be stable UUIDs supplied by the caller.
+  const trueId = uuidv7();
+  const falseId = uuidv7();
   const body = {
+    envId,
     name,
     key,
-    description: '',
+    description,
     tags,
     isEnabled: false,
     variationType: 'boolean',
     variations: [
-      { name: 'true', value: 'true' },
-      { name: 'false', value: 'false' },
+      { id: trueId, name: 'true', value: 'true' },
+      { id: falseId, name: 'false', value: 'false' },
     ],
-    targetUsers: [],
-    rules: [],
-    fallThroughVariations: [{ variation: '1', percentage: 100 }],
+    enabledVariationId: trueId,
+    disabledVariationId: falseId,
   };
   const res = await safeFetch(
     `${config.apiUrl}/api/v1/envs/${encodeURIComponent(envId)}/feature-flags`,
@@ -158,7 +213,31 @@ export async function createFlag(
   if (!res.ok) {
     throw new Error(`FeatBit API ${res.status}: ${await res.text()}`);
   }
-  return res.json() as Promise<FeatureFlag>;
+  const envelope = (await res.json()) as { data?: FeatureFlag } & FeatureFlag;
+  return envelope.data ?? envelope;
+}
+
+/**
+ * Toggle a feature flag on or off in a specific environment.
+ * PUT /api/v1/envs/{envId}/feature-flags/{key}/toggle/{status}
+ */
+export async function toggleFlag(
+  config: FeatBitConfig,
+  envId: string,
+  flagKey: string,
+  enable: boolean
+): Promise<void> {
+  const status = enable ? 'true' : 'false';
+  const res = await safeFetch(
+    `${config.apiUrl}/api/v1/envs/${encodeURIComponent(envId)}/feature-flags/${encodeURIComponent(flagKey)}/toggle/${status}`,
+    {
+      method: 'PUT',
+      headers: headers(config.accessToken),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`FeatBit API ${res.status}: ${await res.text()}`);
+  }
 }
 
 /**

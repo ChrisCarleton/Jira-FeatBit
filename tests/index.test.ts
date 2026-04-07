@@ -29,11 +29,6 @@ jest.mock('@forge/api', () => ({
   default: {
     asApp: jest.fn(() => ({ requestJira: jest.fn() })),
   },
-  // Named export: persistent key-value storage
-  storage: {
-    get: jest.fn(),
-    set: jest.fn(),
-  },
   // Named export: tagged-template URL builder (return interpolated string)
   route: jest.fn((strings: TemplateStringsArray, ...values: unknown[]) =>
     (strings as unknown as string[]).reduce(
@@ -56,14 +51,21 @@ jest.mock('../src/featbit', () => ({
   updateFlagTags: jest.fn(),
 }));
 
+jest.mock('@forge/kvs', () => ({
+  kvs: {
+    get: jest.fn(),
+    set: jest.fn(),
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Imports — run after mocks are registered.
 // Importing index.ts triggers all resolver.define() calls, populating
 // `resolverHandlers` with the handler functions under test.
 // ---------------------------------------------------------------------------
 
-import { storage } from '@forge/api';
 import api from '@forge/api';
+import { kvs } from '@forge/kvs';
 import * as FeatBit from '../src/featbit';
 import '../src/index';
 
@@ -71,8 +73,8 @@ import '../src/index';
 // Typed aliases for mocked dependencies
 // ---------------------------------------------------------------------------
 
-const mockStorageGet = storage.get as jest.Mock;
-const mockStorageSet = storage.set as jest.Mock;
+const mockKvsGet = kvs.get as jest.Mock;
+const mockKvsSet = kvs.set as jest.Mock;
 const mockFeatBit = FeatBit as jest.Mocked<typeof FeatBit>;
 const mockApi = api as unknown as { asApp: jest.Mock };
 
@@ -133,12 +135,12 @@ beforeEach(() => {
 
 describe('getConfig', () => {
   it('returns null when no config has been saved', async () => {
-    mockStorageGet.mockResolvedValueOnce(undefined);
+    mockKvsGet.mockResolvedValueOnce(undefined);
     await expect(call('getConfig')).resolves.toBeNull();
   });
 
   it('returns hasToken:true and masks the access token', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     await expect(call('getConfig')).resolves.toEqual({
       apiUrl: storedConfig.apiUrl,
       hasToken: true,
@@ -147,7 +149,7 @@ describe('getConfig', () => {
   });
 
   it('returns hasToken:false when the stored token is an empty string', async () => {
-    mockStorageGet.mockResolvedValueOnce({ ...storedConfig, accessToken: '' });
+    mockKvsGet.mockResolvedValueOnce({ ...storedConfig, accessToken: '' });
     const result = (await call('getConfig')) as { hasToken: boolean };
     expect(result.hasToken).toBe(false);
   });
@@ -159,24 +161,43 @@ describe('getConfig', () => {
 
 describe('saveConfig', () => {
   it('persists the payload to storage under the expected key', async () => {
-    mockStorageSet.mockResolvedValueOnce(undefined);
+    mockKvsSet.mockResolvedValueOnce(undefined);
     await call('saveConfig', {
       apiUrl: 'http://localhost:5000',
       accessToken: 'tok',
       environments: [],
     });
-    expect(mockStorageSet).toHaveBeenCalledWith('featbit-config', {
+    expect(mockKvsSet).toHaveBeenCalledWith('featbit-config', {
       apiUrl: 'http://localhost:5000',
       accessToken: 'tok',
       environments: [],
+      defaultEnvId: '',
+      portalUrl: '',
     });
   });
 
   it('returns { success: true }', async () => {
-    mockStorageSet.mockResolvedValueOnce(undefined);
+    mockKvsSet.mockResolvedValueOnce(undefined);
     await expect(
       call('saveConfig', { apiUrl: '', accessToken: '', environments: [] })
     ).resolves.toEqual({ success: true });
+  });
+
+  it('preserves the existing token when an empty string is submitted', async () => {
+    mockKvsGet.mockResolvedValueOnce({
+      ...storedConfig,
+      accessToken: 'old-token',
+    });
+    mockKvsSet.mockResolvedValueOnce(undefined);
+    await call('saveConfig', {
+      apiUrl: 'http://localhost:5000',
+      accessToken: '',
+      environments: [],
+    });
+    expect(mockKvsSet).toHaveBeenCalledWith(
+      'featbit-config',
+      expect.objectContaining({ accessToken: 'old-token' })
+    );
   });
 });
 
@@ -224,6 +245,15 @@ describe('fetchEnvironments', () => {
     });
     expect(result).toEqual({ error: 'Error: Connection refused' });
   });
+
+  it('returns { error } when listProjects returns an empty array', async () => {
+    mockFeatBit.listProjects.mockResolvedValueOnce([]);
+    const result = (await call('fetchEnvironments', {
+      apiUrl: 'http://x',
+      accessToken: 'tok',
+    })) as { error: string };
+    expect(result.error).toMatch(/no projects/i);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -232,7 +262,7 @@ describe('fetchEnvironments', () => {
 
 describe('getFlagsForIssue', () => {
   it('returns an error message when FeatBit is not configured', async () => {
-    mockStorageGet.mockResolvedValueOnce(undefined);
+    mockKvsGet.mockResolvedValueOnce(undefined);
     const result = (await call('getFlagsForIssue', { issueKey: 'PROJ-1' })) as {
       error: string;
     };
@@ -240,7 +270,7 @@ describe('getFlagsForIssue', () => {
   });
 
   it('queries each environment with the issue key tag', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockFeatBit.listFlagsByTag.mockResolvedValue([]);
 
     await call('getFlagsForIssue', { issueKey: 'PROJ-99' });
@@ -258,7 +288,7 @@ describe('getFlagsForIssue', () => {
   });
 
   it('also queries with the parent epic tag when the issue has a parent', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockApi.asApp.mockReturnValue({
       requestJira: jest.fn().mockResolvedValue({
         json: () =>
@@ -284,7 +314,7 @@ describe('getFlagsForIssue', () => {
   });
 
   it('does not duplicate the tag query when the issue is itself an epic', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockApi.asApp.mockReturnValue({
       requestJira: jest.fn().mockResolvedValue({
         json: () =>
@@ -302,7 +332,7 @@ describe('getFlagsForIssue', () => {
   });
 
   it('merges flags across environments into correctly shaped rows', async () => {
-    mockStorageGet.mockResolvedValueOnce({
+    mockKvsGet.mockResolvedValueOnce({
       ...storedConfig,
       environments: [{ id: 'env1', key: 'prod', name: 'Production' }],
     });
@@ -330,7 +360,7 @@ describe('getFlagsForIssue', () => {
   });
 
   it('de-duplicates flags that appear under multiple tags', async () => {
-    mockStorageGet.mockResolvedValueOnce({
+    mockKvsGet.mockResolvedValueOnce({
       ...storedConfig,
       environments: [{ id: 'env1', key: 'prod', name: 'Production' }],
     });
@@ -360,7 +390,7 @@ describe('getFlagsForIssue', () => {
 
 describe('searchFlags', () => {
   it('returns an error when not configured', async () => {
-    mockStorageGet.mockResolvedValueOnce(undefined);
+    mockKvsGet.mockResolvedValueOnce(undefined);
     const result = (await call('searchFlags', { query: 'test' })) as {
       error: string;
     };
@@ -368,7 +398,7 @@ describe('searchFlags', () => {
   });
 
   it('returns an error when no environments are configured', async () => {
-    mockStorageGet.mockResolvedValueOnce({ ...storedConfig, environments: [] });
+    mockKvsGet.mockResolvedValueOnce({ ...storedConfig, environments: [] });
     const result = (await call('searchFlags', { query: 'test' })) as {
       error: string;
     };
@@ -376,7 +406,7 @@ describe('searchFlags', () => {
   });
 
   it('searches using the primary (first) environment', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     const flags = [makeFlag({ name: 'Beta Feature', key: 'beta-feature' })];
     mockFeatBit.searchFlags.mockResolvedValueOnce(flags);
 
@@ -393,7 +423,7 @@ describe('searchFlags', () => {
   });
 
   it('returns { error } when the FeatBit client throws', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockFeatBit.searchFlags.mockRejectedValueOnce(new Error('Network error'));
     const result = (await call('searchFlags', { query: 'x' })) as {
       error: string;
@@ -408,7 +438,7 @@ describe('searchFlags', () => {
 
 describe('createFlag', () => {
   it('returns an error when not configured', async () => {
-    mockStorageGet.mockResolvedValueOnce(undefined);
+    mockKvsGet.mockResolvedValueOnce(undefined);
     const result = (await call('createFlag', {
       issueKey: 'PROJ-1',
       name: 'F',
@@ -418,7 +448,7 @@ describe('createFlag', () => {
   });
 
   it('creates the flag in every configured environment', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockFeatBit.createFlag.mockResolvedValue(
       makeFlag({ name: 'New Flag', key: 'new-flag', tags: ['PROJ-1'] })
     );
@@ -439,7 +469,7 @@ describe('createFlag', () => {
   });
 
   it('reports failure for environments where creation throws', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockFeatBit.createFlag
       .mockResolvedValueOnce(makeFlag())
       .mockRejectedValueOnce(new Error('Duplicate key'));
@@ -468,7 +498,7 @@ describe('linkFlag', () => {
   });
 
   it('returns an error when not configured', async () => {
-    mockStorageGet.mockResolvedValueOnce(undefined);
+    mockKvsGet.mockResolvedValueOnce(undefined);
     const result = (await call('linkFlag', {
       issueKey: 'PROJ-1',
       flagKey: 'existing-flag',
@@ -477,7 +507,7 @@ describe('linkFlag', () => {
   });
 
   it('adds the issue key tag to the flag in each environment', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockFeatBit.searchFlags.mockResolvedValue([existingFlag]);
     mockFeatBit.updateFlagTags.mockResolvedValue(undefined);
 
@@ -496,7 +526,7 @@ describe('linkFlag', () => {
   });
 
   it('skips the tag update when the issue key is already present', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     const alreadyTagged = makeFlag({
       id: 'flag-id',
       key: 'existing-flag',
@@ -510,7 +540,7 @@ describe('linkFlag', () => {
   });
 
   it('returns success:false when the flag is not found in an environment', async () => {
-    mockStorageGet.mockResolvedValueOnce(storedConfig);
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
     mockFeatBit.searchFlags.mockResolvedValue([]); // flag absent
 
     const result = (await call('linkFlag', {

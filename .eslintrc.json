@@ -27,13 +27,29 @@
   },
   "overrides": [
     {
-      "files": ["static/src/**/*.ts", "static/src/**/*.tsx"],
+      "files": ["static/src/**/*.ts", "static/src/**/*.vue"],
       "parserOptions": {
         "project": "./static/tsconfig.json"
       },
       "env": {
         "node": false,
         "browser": true
+      }
+    },
+    {
+      "files": ["static/tests/**/*.ts"],
+      "parserOptions": {
+        "project": "./static/tsconfig.test.json"
+      },
+      "env": {
+        "node": false,
+        "browser": true
+      },
+      "rules": {
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-argument": "off",
+        "@typescript-eslint/no-unsafe-call": "off"
       }
     },
     {

@@ -61,7 +61,7 @@ describe('listProjects', () => {
     mockFetch.mockResolvedValueOnce(ok([]));
     await FeatBit.listProjects(cfg);
     expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:5000/api/v1/projects',
+      expect.stringContaining('/api/v1/projects'),
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'test-token',

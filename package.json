@@ -7,27 +7,31 @@
   "scripts": {
     "build": "webpack --config webpack.config.cjs && yarn build:ui",
     "build:typecheck": "tsc --noEmit",
-    "test": "jest",
+    "build:watch": "concurrently -n backend,frontend -c blue,green \"webpack --config webpack.config.cjs --watch\" \"yarn build:ui:watch\"",
+    "build:ui": "yarn --cwd static build",
+    "build:ui:watch": "yarn --cwd static build --watch",
     "deploy": "forge deploy",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "jest && yarn --cwd static test",
     "tunnel": "forge tunnel",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "init-featbit": "node scripts/init-featbit.js",
-    "build:ui": "yarn --cwd static build",
-    "build:ui:watch": "yarn --cwd static build --watch"
+    "init-featbit": "node scripts/init-featbit.js"
   },
   "dependencies": {
     "@forge/api": "^3.0.0",
     "@forge/kvs": "^1.5.0",
-    "@forge/resolver": "^1.5.0"
+    "@forge/resolver": "^1.5.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.5.0",
+    "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "jest": "^30.3.0",
