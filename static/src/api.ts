@@ -14,6 +14,8 @@ export async function saveConfig(payload: {
   environments: Environment[];
   defaultEnvId?: string;
   portalUrl?: string;
+  slackBotToken?: string;
+  slackChannelId?: string;
 }): Promise<{ success: boolean }> {
   return invoke('saveConfig', payload);
 }

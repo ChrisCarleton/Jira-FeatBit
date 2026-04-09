@@ -2,6 +2,11 @@ import ResolverModule from '@forge/resolver';
 import api, { route } from '@forge/api';
 import { kvs } from '@forge/kvs';
 import * as FeatBit from './featbit';
+import {
+  sendSlackNotification,
+  buildFlagCreatedBlocks,
+  buildFlagToggledBlocks,
+} from './slack';
 
 // ---------------------------------------------------------------------------
 // Minimal typed wrapper around @forge/resolver
@@ -40,6 +45,8 @@ interface StoredConfig {
   environments: StoredEnvironment[];
   defaultEnvId?: string;
   portalUrl?: string;
+  slackBotToken?: string;
+  slackChannelId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +82,54 @@ async function getParentEpicKey(issueKey: string): Promise<string | null> {
   }
 }
 
+/**
+ * Returns the Jira display name for the given accountId, or a fallback string.
+ * Used to attribute actions in FeatBit flag descriptions and Jira comments.
+ */
+async function getActorDisplayName(
+  accountId: string | undefined
+): Promise<string> {
+  if (!accountId) return 'a Jira user';
+  try {
+    const res = await api
+      .asApp()
+      .requestJira(route`/rest/api/3/user?accountId=${accountId}`);
+    const user = (await res.json()) as { displayName?: string };
+    return user.displayName ?? accountId;
+  } catch {
+    return accountId;
+  }
+}
+
+/**
+ * Posts a plain-text comment on a Jira issue. Best-effort — never throws so
+ * that a comment failure cannot break the primary flag operation.
+ */
+async function postJiraComment(issueKey: string, text: string): Promise<void> {
+  try {
+    await api
+      .asApp()
+      .requestJira(route`/rest/api/3/issue/${issueKey}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          body: {
+            version: 1,
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text }],
+              },
+            ],
+          },
+        }),
+      });
+  } catch {
+    // Best-effort — never fail the primary operation because of this
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Resolvers
 // ---------------------------------------------------------------------------
@@ -91,24 +146,39 @@ resolver.define('getConfig', async () => {
     environments: cfg.environments,
     defaultEnvId: cfg.defaultEnvId,
     portalUrl: cfg.portalUrl,
+    hasSlackToken: Boolean(cfg.slackBotToken),
+    slackChannelId: cfg.slackChannelId ?? '',
   };
 });
 
 resolver.define('saveConfig', async (req) => {
-  const { apiUrl, accessToken, environments, defaultEnvId, portalUrl } =
-    req.payload as {
-      apiUrl: string;
-      accessToken: string;
-      environments: StoredEnvironment[];
-      defaultEnvId?: string;
-      portalUrl?: string;
-    };
+  const {
+    apiUrl,
+    accessToken,
+    environments,
+    defaultEnvId,
+    portalUrl,
+    slackBotToken,
+    slackChannelId,
+  } = req.payload as {
+    apiUrl: string;
+    accessToken: string;
+    environments: StoredEnvironment[];
+    defaultEnvId?: string;
+    portalUrl?: string;
+    slackBotToken?: string;
+    slackChannelId?: string;
+  };
   // If no token was submitted (user left the field blank to keep the saved one),
   // preserve the previously stored token instead of overwriting it with ''.
+  const existing = await loadConfig();
   let tokenToStore = accessToken;
   if (!tokenToStore) {
-    const existing = await loadConfig();
     tokenToStore = existing?.accessToken ?? '';
+  }
+  let slackTokenToStore = slackBotToken ?? '';
+  if (!slackTokenToStore) {
+    slackTokenToStore = existing?.slackBotToken ?? '';
   }
   await kvs.set('featbit-config', {
     apiUrl,
@@ -116,6 +186,8 @@ resolver.define('saveConfig', async (req) => {
     environments,
     defaultEnvId: defaultEnvId ?? '',
     portalUrl: portalUrl ?? '',
+    slackBotToken: slackTokenToStore,
+    slackChannelId: slackChannelId ?? '',
   });
   return { success: true };
 });
@@ -293,6 +365,15 @@ resolver.define('createFlag', async (req) => {
   const featbitCfg = { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken };
   const tags = [issueKey];
 
+  // Resolve the Jira user who triggered this action for attribution.
+  const actorName = await getActorDisplayName(
+    req.context?.accountId as string | undefined
+  );
+  // Embed attribution in the flag description so it appears in FeatBit's UI.
+  const fullDescription = description
+    ? `${description}\n\nCreated via Jira by ${actorName} (${issueKey}).`
+    : `Created via Jira by ${actorName} (${issueKey}).`;
+
   // If a default environment is configured, create only in that environment.
   const envsToCreate = cfg.defaultEnvId
     ? cfg.environments.filter((e) => e.id === cfg.defaultEnvId)
@@ -315,7 +396,7 @@ resolver.define('createFlag', async (req) => {
           name,
           key,
           tags,
-          description ?? ''
+          fullDescription
         );
         return { envId: env.id, envName: env.name, success: true };
       } catch (err) {
@@ -328,6 +409,30 @@ resolver.define('createFlag', async (req) => {
       }
     })
   );
+
+  if (results.some((r) => r.success)) {
+    await postJiraComment(
+      issueKey,
+      `Feature flag "${name}" (${key}) was created by ${actorName} via the FeatBit-Jira integration.`
+    );
+    if (cfg.slackBotToken && cfg.slackChannelId) {
+      const envNames = results.filter((r) => r.success).map((r) => r.envName);
+      const blocks = buildFlagCreatedBlocks({
+        name,
+        key,
+        actorName,
+        issueKey,
+        envNames,
+        ...(cfg.portalUrl ? { portalUrl: cfg.portalUrl } : {}),
+      });
+      await sendSlackNotification(
+        cfg.slackBotToken,
+        cfg.slackChannelId,
+        blocks,
+        `Flag "${name}" created by ${actorName}`
+      );
+    }
+  }
 
   return { results };
 });
@@ -347,6 +452,10 @@ resolver.define('linkFlag', async (req) => {
       error:
         'No environments configured. Open FeatBit Settings and run "Test connection & load environments" first.',
     };
+
+  const actorName = await getActorDisplayName(
+    req.context?.accountId as string | undefined
+  );
 
   const featbitCfg = { apiUrl: cfg.apiUrl, accessToken: cfg.accessToken };
 
@@ -388,16 +497,24 @@ resolver.define('linkFlag', async (req) => {
     })
   );
 
+  if (results.some((r) => r.success)) {
+    await postJiraComment(
+      issueKey,
+      `Feature flag "${flagKey}" was linked to this issue by ${actorName} via the FeatBit-Jira integration.`
+    );
+  }
+
   return { results };
 });
 
 // ── Toggle a flag on/off in one environment ──────────────────────────────────
 
 resolver.define('toggleFlag', async (req) => {
-  const { envId, flagKey, enable } = req.payload as {
+  const { envId, flagKey, enable, issueKey } = req.payload as {
     envId: string;
     flagKey: string;
     enable: boolean;
+    issueKey?: string;
   };
 
   const cfg = await loadConfig();
@@ -410,6 +527,38 @@ resolver.define('toggleFlag', async (req) => {
       flagKey,
       enable
     );
+
+    if (issueKey || (cfg.slackBotToken && cfg.slackChannelId)) {
+      const actorName = await getActorDisplayName(
+        req.context?.accountId as string | undefined
+      );
+      const action = enable ? 'enabled' : 'disabled';
+      if (issueKey) {
+        await postJiraComment(
+          issueKey,
+          `Feature flag "${flagKey}" was ${action} by ${actorName} via the FeatBit-Jira integration.`
+        );
+      }
+      if (cfg.slackBotToken && cfg.slackChannelId) {
+        const envName =
+          cfg.environments.find((e) => e.id === envId)?.name ?? envId;
+        const blocks = buildFlagToggledBlocks({
+          flagKey,
+          enable,
+          actorName,
+          envName,
+          ...(issueKey ? { issueKey } : {}),
+          ...(cfg.portalUrl ? { portalUrl: cfg.portalUrl } : {}),
+        });
+        await sendSlackNotification(
+          cfg.slackBotToken,
+          cfg.slackChannelId,
+          blocks,
+          `Flag "${flagKey}" ${action} by ${actorName}`
+        );
+      }
+    }
+
     return { success: true };
   } catch (err) {
     return { error: String(err) };

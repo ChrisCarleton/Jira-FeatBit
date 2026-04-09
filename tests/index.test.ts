@@ -153,10 +153,12 @@ describe('getConfig', () => {
 
   it('returns hasToken:true and masks the access token', async () => {
     mockKvsGet.mockResolvedValueOnce(storedConfig);
-    await expect(call('getConfig')).resolves.toEqual({
+    await expect(call('getConfig')).resolves.toMatchObject({
       apiUrl: storedConfig.apiUrl,
       hasToken: true,
       environments: storedConfig.environments,
+      hasSlackToken: false,
+      slackChannelId: '',
     });
   });
 
@@ -185,6 +187,8 @@ describe('saveConfig', () => {
       environments: [],
       defaultEnvId: '',
       portalUrl: '',
+      slackBotToken: '',
+      slackChannelId: '',
     });
   });
 

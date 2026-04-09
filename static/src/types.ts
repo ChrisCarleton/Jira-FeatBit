@@ -41,4 +41,6 @@ export interface StoredConfig {
   environments: Environment[];
   defaultEnvId?: string;
   portalUrl?: string;
+  hasSlackToken?: boolean;
+  slackChannelId?: string;
 }

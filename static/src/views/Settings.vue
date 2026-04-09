@@ -12,6 +12,10 @@ const tokenPlaceholder = ref('Enter access token');
 const environments = ref<Environment[]>([]);
 const defaultEnvId = ref('');
 const portalUrl = ref('');
+const slackBotToken = ref('');
+const hasSlackToken = ref(false);
+const slackTokenPlaceholder = ref('Enter bot token (xoxb-...)');
+const slackChannelId = ref('');
 const fetching = ref(false);
 const saving = ref(false);
 const fetchError = ref<string | null>(null);
@@ -29,6 +33,11 @@ onMounted(() => {
       hasToken.value = true;
       tokenPlaceholder.value = '(token saved – leave blank to keep)';
     }
+    if (cfg.hasSlackToken) {
+      hasSlackToken.value = true;
+      slackTokenPlaceholder.value = '(token saved – leave blank to keep)';
+    }
+    slackChannelId.value = cfg.slackChannelId ?? '';
   });
 });
 
@@ -80,12 +89,18 @@ async function handleSave() {
     environments: environments.value,
     defaultEnvId: defaultEnvId.value || undefined,
     portalUrl: portalUrl.value || undefined,
+    slackBotToken: slackBotToken.value || undefined,
+    slackChannelId: slackChannelId.value || undefined,
   });
   saving.value = false;
   saveToast.show('Settings saved successfully.');
   if (accessToken.value) {
     hasToken.value = true;
     tokenPlaceholder.value = '(token saved – leave blank to keep)';
+  }
+  if (slackBotToken.value) {
+    hasSlackToken.value = true;
+    slackTokenPlaceholder.value = '(token saved – leave blank to keep)';
   }
 }
 
@@ -297,6 +312,41 @@ const inputCls =
           </optgroup>
         </template>
       </select>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-sm font-semibold text-text mb-2">Slack Notifications</h2>
+      <p class="text-xs text-text-subtle mb-2">
+        Optionally post a message to Slack when a flag is created or toggled.
+        Both fields are required; leave either blank to disable Slack
+        notifications.
+      </p>
+
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
+        >Bot Token
+        <span class="font-normal text-text-muted">(optional)</span></label
+      >
+      <input
+        :class="inputCls"
+        type="password"
+        v-model="slackBotToken"
+        :placeholder="slackTokenPlaceholder"
+      />
+
+      <label class="block text-xs font-semibold text-text-subtle mb-1"
+        >Channel ID
+        <span class="font-normal text-text-muted">(optional)</span></label
+      >
+      <input
+        :class="inputCls"
+        type="text"
+        v-model="slackChannelId"
+        placeholder="C012AB3CD"
+      />
+      <p class="text-xs text-text-subtle -mt-2 mb-3">
+        Right-click a channel in Slack → <em>Copy link</em> — the ID is the last
+        path segment.
+      </p>
     </div>
 
     <ToastMessage
