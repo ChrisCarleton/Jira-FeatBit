@@ -10,11 +10,8 @@ module.exports = {
   entry: './src/index.ts',
   output: {
     filename: 'index.js',
-    path: path.resolve(__dirname, 'dist'),
-    // Forge expects CommonJS exports
+    path: path.resolve(__dirname, '../../dist'),
     libraryTarget: 'commonjs2',
-    // Don't mangle names – makes Forge error messages readable
-    // and matches how Forge itself bundles
     clean: true,
   },
   resolve: {
@@ -28,7 +25,6 @@ module.exports = {
           loader: 'ts-loader',
           options: {
             configFile: 'tsconfig.json',
-            // Type-check is handled separately (tsc --noEmit or forge lint)
             transpileOnly: false,
           },
         },
@@ -36,7 +32,6 @@ module.exports = {
       },
     ],
   },
-  // Forge provides these at runtime – don't bundle them
   externals: {
     '@forge/api': 'commonjs @forge/api',
     '@forge/resolver': 'commonjs @forge/resolver',
@@ -44,7 +39,6 @@ module.exports = {
     '@forge/bridge': 'commonjs @forge/bridge',
   },
   optimization: {
-    // Keep output readable for debugging
     minimize: false,
   },
   devtool: 'source-map',

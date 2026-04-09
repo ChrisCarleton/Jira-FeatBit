@@ -104,8 +104,8 @@ const hasMultipleProjects = computed(() => projectGroups.value.length > 1);
           >
             <button
               v-if="portalUrl"
-              @click="openFlag(portalUrl, flag.key)"
               class="block font-medium text-link hover:underline cursor-pointer bg-transparent border-0 p-0 text-left"
+              @click="openFlag(portalUrl, flag.key)"
             >
               {{ flag.name }}
             </button>

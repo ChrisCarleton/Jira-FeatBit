@@ -13,6 +13,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Lerna needs full history to detect which packages changed
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,20 +37,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Install backend dependencies
+      - name: Cache Nx / Lerna task outputs
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/package.json', '**/yarn.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nx-${{ hashFiles('**/package.json', '**/yarn.lock') }}-
+            ${{ runner.os }}-nx-
+
+      - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Type-check backend
-        run: yarn build:typecheck
+      - name: Build all packages
+        run: yarn build
 
-      - name: Run backend tests
-        run: yarn jest --no-coverage
-
-      - name: Install frontend dependencies
-        run: yarn --cwd static install --immutable
-
-      - name: Type-check & build frontend
-        run: yarn --cwd static build
-
-      - name: Run frontend tests
-        run: yarn --cwd static test
+      - name: Run all tests
+        run: yarn test

@@ -82,7 +82,12 @@ async function handleToggle(payload: {
     };
   });
 
-  const res = await toggleFlag({ envId, flagKey, enable, issueKey: issueKey.value ?? undefined });
+  const res = await toggleFlag({
+    envId,
+    flagKey,
+    enable,
+    issueKey: issueKey.value ?? undefined,
+  });
   toggling.value.delete(key);
 
   if (res.error) {

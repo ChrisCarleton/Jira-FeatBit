@@ -22,7 +22,7 @@ modules:
 
 resources:
   - key: main
-    path: static/dist
+    path: src/ui/dist
     # No tunnel.port — forge tunnel serves static/dist directly.
     # This avoids CSP violations caused by Vite dev server inline style injection.
 
@@ -33,6 +33,7 @@ app:
 
 permissions:
   scopes:
+    - read:jira-user
     - read:jira-work
     - write:jira-work
     - storage:app

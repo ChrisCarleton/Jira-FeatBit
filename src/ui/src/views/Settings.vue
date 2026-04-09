@@ -146,9 +146,9 @@ const inputCls =
         >API Base URL</label
       >
       <input
+        v-model="apiUrl"
         :class="inputCls"
         type="url"
-        v-model="apiUrl"
         placeholder="https://your-featbit-instance.com:5000"
       />
 
@@ -156,9 +156,9 @@ const inputCls =
         >Access Token</label
       >
       <input
+        v-model="accessToken"
         :class="inputCls"
         type="password"
-        v-model="accessToken"
         :placeholder="tokenPlaceholder"
       />
 
@@ -169,16 +169,16 @@ const inputCls =
         ></label
       >
       <input
+        v-model="portalUrl"
         :class="inputCls"
         type="url"
-        v-model="portalUrl"
         placeholder="http://localhost:8081"
       />
 
       <button
         class="px-4 py-1.5 bg-surface-overlay text-text border border-border rounded text-sm font-medium cursor-pointer disabled:opacity-50"
-        @click="handleFetchEnvs"
         :disabled="fetching"
+        @click="handleFetchEnvs"
       >
         {{ fetching ? 'Loading…' : 'Test connection & load environments' }}
       </button>
@@ -292,7 +292,7 @@ const inputCls =
         specific environment to create only there, or <em>None</em> to disable
         flag creation entirely.
       </p>
-      <select :class="inputCls" v-model="defaultEnvId">
+      <select v-model="defaultEnvId" :class="inputCls">
         <option value="">— All environments —</option>
         <option value="__none__">— None (disable flag creation) —</option>
         <template v-if="projectGroups.length === 1">
@@ -327,9 +327,9 @@ const inputCls =
         <span class="font-normal text-text-muted">(optional)</span></label
       >
       <input
+        v-model="slackBotToken"
         :class="inputCls"
         type="password"
-        v-model="slackBotToken"
         :placeholder="slackTokenPlaceholder"
       />
 
@@ -338,9 +338,9 @@ const inputCls =
         <span class="font-normal text-text-muted">(optional)</span></label
       >
       <input
+        v-model="slackChannelId"
         :class="inputCls"
         type="text"
-        v-model="slackChannelId"
         placeholder="C012AB3CD"
       />
       <p class="text-xs text-text-subtle -mt-2 mb-3">
@@ -356,8 +356,8 @@ const inputCls =
 
     <button
       class="px-4 py-1.5 bg-accent text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
-      @click="handleSave"
       :disabled="saving"
+      @click="handleSave"
     >
       {{ saving ? 'Saving…' : 'Save settings' }}
     </button>

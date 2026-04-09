@@ -8,10 +8,10 @@ Atlassian Forge app that integrates [FeatBit](https://github.com/featbit/featbit
 
 FeatBit flags are linked to Jira tickets using **FeatBit tags**. When a flag is tagged with a Jira issue key (e.g. `PROJ-123`), it appears in that ticket's feature flag panel. Flags tagged with a parent epic's key are also surfaced on all child tickets.
 
-The app consists of two parts:
+The app consists of two packages managed as a [Lerna](https://lerna.js.org/) + Yarn workspace monorepo:
 
-- **Forge backend** (`src/`) — TypeScript resolver functions that run server-side inside Atlassian's infrastructure. They call the FeatBit REST API and use Forge Storage to persist configuration. The FeatBit access token is stored here and never sent to the browser.
-- **Custom UI frontend** (`static/`) — A Vue app served by Forge. It calls the backend resolvers via `@forge/bridge`. It renders as either the issue panel or the settings page depending on which Forge module loaded it.
+- **Forge backend** (`src/api/`) — TypeScript resolver functions that run server-side inside Atlassian's infrastructure. They call the FeatBit REST API and use Forge Storage to persist configuration. The FeatBit access token is stored here and never sent to the browser.
+- **Custom UI frontend** (`src/ui/`) — A Vue app served by Forge. It calls the backend resolvers via `@forge/bridge`. It renders as either the issue panel or the settings page depending on which Forge module loaded it.
 
 ```
 Browser (Jira)
@@ -27,40 +27,47 @@ FeatBit API Server
 
 ## Project structure
 
+This is a Lerna monorepo with two Yarn workspace packages under `src/`.
+
 ```
 featbit-jira/
+├── lerna.json                # Lerna configuration (independent versioning, yarn)
 ├── manifest.yml              # Forge app manifest — modules, permissions, resource
-├── package.json              # Backend dependencies (Yarn, ESM)
-├── tsconfig.json             # Backend TypeScript config
-├── tsconfig.test.json        # TypeScript config used by Jest (CommonJS, includes tests/)
-├── jest.config.cjs           # Jest configuration
+├── package.json              # Workspace root — global devDeps, Lerna scripts
 ├── docker-compose.yml        # Local FeatBit instance for testing
 │
 ├── src/
-│   ├── index.ts              # All Forge resolver functions (the backend entry point)
-│   └── featbit.ts            # FeatBit REST API client
-│
-├── tests/
-│   ├── featbit.test.ts       # Unit tests for the FeatBit API client
-│   └── index.test.ts         # Unit tests for all Forge resolver handlers
-│
-└── static/                   # Custom UI (Vue + Vite)
-    ├── index.html
-    ├── package.json
-    ├── tsconfig.json
-    ├── vite.config.ts
-    └── src/
-        ├── main.ts           # Vue entry point
-        ├── App.vue           # Renders IssuePanel or Settings based on moduleKey
-        ├── api.ts            # Typed invoke() wrappers (bridge → resolver)
-        ├── types.ts          # Shared TypeScript interfaces
-        ├── views/
-        │   ├── IssuePanel.vue   # Panel shown on every Jira issue
-        │   └── Settings.vue     # Global settings page
-        └── components/
-            ├── FlagTable.vue        # Multi-environment flag status table
-            ├── CreateFlagModal.vue  # Create a new flag modal
-            └── LinkFlagModal.vue    # Search and link an existing flag modal
+│   ├── api/                  # @featbit-jira/api — Forge backend
+│   │   ├── package.json
+│   │   ├── tsconfig.json         # TypeScript config (CommonJS output for webpack)
+│   │   ├── tsconfig.test.json    # TypeScript config used by Jest
+│   │   ├── jest.config.cjs       # Jest configuration
+│   │   ├── webpack.config.cjs    # Bundles to ../../dist/ (project root)
+│   │   ├── src/
+│   │   │   ├── index.ts          # All Forge resolver functions (backend entry point)
+│   │   │   ├── featbit.ts        # FeatBit REST API client
+│   │   │   └── slack.ts          # Slack notification helpers
+│   │   └── tests/
+│   │       ├── featbit.test.ts   # Unit tests for the FeatBit API client
+│   │       └── index.test.ts     # Unit tests for all Forge resolver handlers
+│   │
+│   └── ui/                   # @featbit-jira/ui — Custom UI (Vue + Vite)
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── vite.config.ts
+│       ├── index.html
+│       └── src/
+│           ├── main.ts           # Vue entry point
+│           ├── App.vue           # Renders IssuePanel or Settings based on moduleKey
+│           ├── api.ts            # Typed invoke() wrappers (bridge → resolver)
+│           ├── types.ts          # Shared TypeScript interfaces
+│           ├── views/
+│           │   ├── IssuePanel.vue   # Panel shown on every Jira issue
+│           │   └── Settings.vue     # Global settings page
+│           └── components/
+│               ├── FlagTable.vue        # Multi-environment flag status table
+│               ├── CreateFlagModal.vue  # Create a new flag modal
+│               └── LinkFlagModal.vue    # Search and link an existing flag modal
 ```
 
 ## Forge modules
@@ -70,11 +77,11 @@ featbit-jira/
 | `jira:issuePanel` | `featbit-flags-panel` | Shown on every Jira issue. Displays linked flags.                                     |
 | `jira:globalPage` | `featbit-settings`    | Admin page for entering the FeatBit API URL, access token and selecting environments. |
 
-Both modules share the same Vue app entry point (`static/dist`). `App.vue` reads `ctx.moduleKey` from the Forge context to decide which view to render.
+Both modules share the same Vue app entry point (`src/ui/dist`). `App.vue` reads `ctx.moduleKey` from the Forge context to decide which view to render.
 
 ## Resolver functions
 
-All backend logic lives in `src/index.ts`. Each resolver is called from the frontend via `invoke()`.
+All backend logic lives in `src/api/src/index.ts`. Each resolver is called from the frontend via `invoke()`.
 
 | Resolver            | Description                                                                                                                                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -86,7 +93,7 @@ All backend logic lives in `src/index.ts`. Each resolver is called from the fron
 | `createFlag`        | Creates a boolean flag in all configured environments simultaneously, pre-tagged with the issue key.                                                                |
 | `linkFlag`          | Adds the issue key tag to an existing flag across all environments.                                                                                                 |
 
-## FeatBit API client (`src/featbit.ts`)
+## FeatBit API client (`src/api/src/featbit.ts`)
 
 Thin, typed wrapper around the FeatBit REST API. All requests include a 15-second timeout via `AbortController`. Functions:
 
@@ -116,12 +123,10 @@ Flags that don't exist in a given environment show `N/A` rather than `Disabled`.
 ### 1. Install dependencies
 
 ```bash
-# Backend
 yarn install
-
-# Frontend
-cd static && yarn install && cd ..
 ```
+
+This installs all dependencies for every workspace package (`@featbit-jira/api` and `@featbit-jira/ui`) in one step.
 
 ### 2. Start a local FeatBit instance (optional, for testing)
 
@@ -172,10 +177,7 @@ forge register       # first time only — updates app.id in manifest.yml
 ### 4. Build and deploy
 
 ```bash
-# Build the frontend first — Forge deploys the pre-built static/dist/
-cd static && yarn build && cd ..
-
-yarn build           # compile backend TypeScript to dist/
+yarn build           # Lerna builds both packages (API → dist/, UI → src/ui/dist/)
 forge deploy
 forge install        # install in your Jira cloud site
 ```
@@ -209,7 +211,7 @@ To create one:
 
 ### Both at once (recommended)
 
-`yarn build:watch` runs the backend webpack watcher and frontend Vite build watcher in parallel:
+`yarn build:watch` runs the backend webpack watcher and frontend Vite build watcher in parallel via Lerna:
 
 ```bash
 # Terminal 1 — rebuild both on change
@@ -221,7 +223,7 @@ forge tunnel
 
 ### Backend only
 
-Edit files in `src/`, then:
+Edit files in `src/api/src/`, then:
 
 ```bash
 yarn build && forge deploy
@@ -231,7 +233,7 @@ Or watch mode for the backend alone:
 
 ```bash
 # Terminal 1 — rebuild backend on change
-webpack --config webpack.config.cjs --watch
+yarn workspace @featbit-jira/api build:watch
 
 # Terminal 2
 forge tunnel
@@ -241,7 +243,7 @@ forge tunnel
 
 ```bash
 # Terminal 1 — Vite dev server on :3000 (hot-reload)
-cd static && yarn dev
+yarn workspace @featbit-jira/ui dev
 
 # Terminal 2 — tunnel with Custom UI port forwarding
 forge tunnel
@@ -258,36 +260,38 @@ forge deploy
 
 ## Useful commands
 
-| Command                     | What it does                                  |
-| --------------------------- | --------------------------------------------- |
-| `yarn build`                | Compile backend TypeScript and frontend       |
-| `yarn build:watch`          | Watch and rebuild both backend and frontend   |
-| `yarn build:ui:watch`       | Watch and rebuild frontend only               |
-| `yarn test`                 | Run all unit tests (backend + frontend)       |
-| `yarn lint`                 | ESLint the backend source                     |
-| `yarn lint:fix`             | Auto-fix lint issues                          |
-| `yarn format`               | Prettier-format backend source                |
-| `yarn init-featbit`         | Seed the FeatBit PostgreSQL database          |
-| `yarn init-featbit --reset` | Wipe and re-seed the FeatBit database         |
-| `forge deploy`              | Deploy the app to Atlassian infrastructure    |
-| `forge install`             | Install the deployed app in a Jira site       |
-| `forge tunnel`              | Proxy Forge invocations to your local machine |
-| `forge logs`                | Stream live logs from the deployed app        |
-| `cd static && yarn dev`     | Start Vite dev server for the frontend        |
+| Command                                  | What it does                                        |
+| ---------------------------------------- | --------------------------------------------------- |
+| `yarn build`                             | Build both packages via Lerna                       |
+| `yarn build:watch`                       | Watch and rebuild both packages in parallel         |
+| `yarn build:typecheck`                   | Type-check both packages without emitting           |
+| `yarn test`                              | Run all unit tests (API Jest + UI Vitest) via Lerna |
+| `yarn lint`                              | ESLint across both packages                         |
+| `yarn lint:fix`                          | Auto-fix lint issues across both packages           |
+| `yarn format`                            | Prettier-format source across both packages         |
+| `yarn init-featbit`                      | Seed the FeatBit PostgreSQL database                |
+| `yarn init-featbit --reset`              | Wipe and re-seed the FeatBit database               |
+| `yarn workspace @featbit-jira/ui dev`    | Start Vite dev server for the frontend              |
+| `yarn workspace @featbit-jira/api build` | Build the API package only                          |
+| `yarn workspace @featbit-jira/ui build`  | Build the UI package only                           |
+| `forge deploy`                           | Deploy the app to Atlassian infrastructure          |
+| `forge install`                          | Install the deployed app in a Jira site             |
+| `forge tunnel`                           | Proxy Forge invocations to your local machine       |
+| `forge logs`                             | Stream live logs from the deployed app              |
 
 ## CI
 
 A GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs automatically on every push and pull request. It:
 
-1. Installs backend and frontend dependencies (Yarn 4 via Corepack)
-2. Type-checks the backend (`tsc --noEmit`)
-3. Runs the backend Jest test suite
-4. Type-checks and builds the frontend (`vue-tsc` + Vite)
-5. Runs the frontend Vitest suite
+1. Installs all workspace dependencies with a single `yarn install` (Yarn 4 via Corepack)
+2. Type-checks the API package (`tsc --noEmit`)
+3. Runs the API Jest test suite
+4. Type-checks and builds the UI package (`vue-tsc` + Vite)
+5. Runs the UI Vitest suite
 
 ## Testing
 
-Backend unit tests cover the FeatBit API client (`src/featbit.ts`) and all resolver handlers (`src/index.ts`). Tests run with [Jest](https://jestjs.io/) via [ts-jest](https://kulshekhar.github.io/ts-jest/) and do not require a running FeatBit instance — all external dependencies (`@forge/api`, `@forge/resolver`, `fetch`) are mocked.
+API unit tests cover the FeatBit API client (`src/api/src/featbit.ts`) and all resolver handlers (`src/api/src/index.ts`). Tests run with [Jest](https://jestjs.io/) via [ts-jest](https://kulshekhar.github.io/ts-jest/) and do not require a running FeatBit instance — all external dependencies (`@forge/api`, `@forge/resolver`, `fetch`) are mocked.
 
 ```bash
 yarn test
@@ -295,16 +299,16 @@ yarn test
 
 ### Test layout
 
-| File                    | What it covers                                                                                                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tests/featbit.test.ts` | `listProjects`, `listFlagsByTag`, `searchFlags`, `createFlag`, `updateFlagTags` — correct URLs, request headers/bodies, response parsing, URL-encoding, error propagation |
-| `tests/index.test.ts`   | All 7 resolver handlers — config CRUD, environment discovery, flag querying (including parent-epic tag logic and flag de-duplication), flag creation and linking          |
+| File                            | What it covers                                                                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/api/tests/featbit.test.ts` | `listProjects`, `listFlagsByTag`, `searchFlags`, `createFlag`, `updateFlagTags` — correct URLs, request headers/bodies, response parsing, URL-encoding, error propagation |
+| `src/api/tests/index.test.ts`   | All 7 resolver handlers — config CRUD, environment discovery, flag querying (including parent-epic tag logic and flag de-duplication), flag creation and linking          |
 
 ### Mocking strategy
 
 - **`@forge/resolver`** — the `Resolver` constructor mock captures each `resolver.define()` call so tests can invoke handlers directly without the Forge runtime.
 - **`@forge/api`** — `storage.get`/`storage.set` are `jest.fn()` mocks; the Jira API client (`api.asApp().requestJira`) is mocked per-test to simulate different issue shapes (story with parent epic, standalone epic, etc.).
-- **`../src/featbit`** — auto-mocked so resolver tests are fully isolated from HTTP.
+- **`../src/featbit`** — auto-mocked (relative to `src/api/tests/`) so resolver tests are fully isolated from HTTP.
 - **`global.fetch`** — replaced with a `jest.fn()` in `featbit.test.ts` so HTTP behaviour can be verified without network access.
 
 ## Resources

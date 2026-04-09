@@ -78,6 +78,7 @@ export async function toggleFlag(payload: {
   envId: string;
   flagKey: string;
   enable: boolean;
+  issueKey?: string;
 }): Promise<{ success?: boolean; error?: string }> {
   return invoke('toggleFlag', payload);
 }

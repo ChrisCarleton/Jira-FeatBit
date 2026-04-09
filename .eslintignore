@@ -1,6 +1,10 @@
 node_modules
 dist
 build
-__mocks__
-webpack.config.cjs
 *.js
+
+# Nx cache
+.nx/
+
+# Forge lint shim — not real app code, not covered by any tsconfig
+src/index.ts

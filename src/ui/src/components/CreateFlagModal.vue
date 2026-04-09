@@ -84,10 +84,10 @@ function handleKeyDown(e: KeyboardEvent) {
   >
     <div
       class="bg-surface-raised rounded w-[440px] max-w-[90vw] p-6 shadow-xl"
-      @click.stop
-      @keydown="handleKeyDown"
       role="dialog"
       aria-modal="true"
+      @click.stop
+      @keydown="handleKeyDown"
     >
       <h2 class="text-base font-bold text-text mb-4">Create feature flag</h2>
       <p class="text-xs text-text-subtle mb-4">
@@ -111,8 +111,8 @@ function handleKeyDown(e: KeyboardEvent) {
         class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3"
         type="text"
         :value="name"
-        @input="handleNameChange(($event.target as HTMLInputElement).value)"
         placeholder="e.g. My New Feature"
+        @input="handleNameChange(($event.target as HTMLInputElement).value)"
       />
 
       <label class="block text-xs font-semibold text-text-subtle mb-1"
@@ -122,8 +122,8 @@ function handleKeyDown(e: KeyboardEvent) {
         class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3"
         type="text"
         :value="key"
-        @input="handleKeyChange(($event.target as HTMLInputElement).value)"
         placeholder="e.g. my-new-feature"
+        @input="handleKeyChange(($event.target as HTMLInputElement).value)"
       />
 
       <label class="block text-xs font-semibold text-text-subtle mb-1"
@@ -131,24 +131,24 @@ function handleKeyDown(e: KeyboardEvent) {
         <span class="font-normal text-text-muted">(optional)</span></label
       >
       <textarea
+        v-model="description"
         class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3 resize-none"
         rows="2"
-        v-model="description"
         placeholder="What does this flag control?"
       />
 
       <div class="flex justify-end gap-2 mt-2">
         <button
           class="px-4 py-1.5 bg-surface-overlay text-text border border-border rounded text-sm font-medium cursor-pointer disabled:opacity-50"
-          @click="emit('close')"
           :disabled="submitting"
+          @click="emit('close')"
         >
           Cancel
         </button>
         <button
           class="px-4 py-1.5 bg-accent text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
-          @click="handleSubmit"
           :disabled="submitting"
+          @click="handleSubmit"
         >
           {{ submitting ? 'Creating…' : 'Create flag' }}
         </button>

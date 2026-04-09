@@ -74,9 +74,9 @@ async function handleLink() {
   >
     <div
       class="bg-surface-raised rounded w-[480px] max-w-[90vw] p-6 shadow-xl"
-      @click.stop
       role="dialog"
       aria-modal="true"
+      @click.stop
     >
       <h2 class="text-base font-bold text-text mb-4">Link existing flag</h2>
       <p class="text-xs text-text-subtle mb-4">
@@ -95,16 +95,16 @@ async function handleLink() {
       <div class="flex gap-2 mb-3">
         <input
           ref="searchInput"
+          v-model="query"
           class="flex-1 px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link"
           type="text"
-          v-model="query"
-          @keydown="handleKeyDown"
           placeholder="Search by flag name or key…"
+          @keydown="handleKeyDown"
         />
         <button
           class="px-3.5 py-1.5 bg-surface-overlay text-text border border-border rounded text-sm font-medium cursor-pointer whitespace-nowrap disabled:opacity-50"
-          @click="handleSearch"
           :disabled="searching"
+          @click="handleSearch"
         >
           {{ searching ? '…' : 'Search' }}
         </button>
@@ -143,16 +143,16 @@ async function handleLink() {
       <div class="flex justify-end gap-2">
         <button
           class="px-4 py-1.5 bg-surface-overlay text-text border border-border rounded text-sm font-medium cursor-pointer disabled:opacity-50"
-          @click="emit('close')"
           :disabled="submitting"
+          @click="emit('close')"
         >
           Cancel
         </button>
         <button
           class="px-4 py-1.5 bg-accent text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
           :class="{ 'opacity-50 cursor-not-allowed': !selected }"
-          @click="handleLink"
           :disabled="!selected || submitting"
+          @click="handleLink"
         >
           {{ submitting ? 'Linking…' : 'Link flag' }}
         </button>

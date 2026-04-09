@@ -15,9 +15,8 @@
 dist/
 node_modules/
 
-# Frontend build output and dependencies
-static/dist/
-static/node_modules/
+# Nx / Lerna task cache
+.nx/
 
 # macOS
 .DS_Store

@@ -1,0 +1,31 @@
+{
+  "name": "@featbit-jira/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "webpack --config webpack.config.cjs",
+    "build:typecheck": "tsc --noEmit",
+    "build:watch": "webpack --config webpack.config.cjs --watch",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@forge/api": "^3.0.0",
+    "@forge/kvs": "^1.5.0",
+    "@forge/resolver": "^1.5.0",
+    "@slack/web-api": "^7.15.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/uuid": "^11.0.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.105.4",
+    "webpack-cli": "^7.0.2"
+  }
+}
