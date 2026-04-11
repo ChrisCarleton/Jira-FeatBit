@@ -1,6 +1,6 @@
 # featbit-jira
 
-[![CI](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml/badge.svg)](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml)
+[![CI](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml?query=branch%3Amain)
 
 Atlassian Forge app that integrates [FeatBit](https://github.com/featbit/featbit) feature flags directly into Jira. From any Jira ticket you can view linked flags across multiple environments, create new flags, and link existing ones — all without leaving Jira.
 
