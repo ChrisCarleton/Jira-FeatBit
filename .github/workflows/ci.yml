@@ -41,9 +41,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .nx/cache
-          key: ${{ runner.os }}-nx-${{ hashFiles('**/package.json', '**/yarn.lock') }}-${{ github.sha }}
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/package.json', '**/yarn.lock', 'src/**/*.ts', 'src/**/*.vue') }}
           restore-keys: |
-            ${{ runner.os }}-nx-${{ hashFiles('**/package.json', '**/yarn.lock') }}-
             ${{ runner.os }}-nx-
 
       - name: Install dependencies

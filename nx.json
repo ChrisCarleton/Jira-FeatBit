@@ -3,14 +3,41 @@
   "targetDefaults": {
     "build": {
       "cache": true,
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist"]
     },
     "build:typecheck": {
-      "cache": true
+      "cache": true,
+      "inputs": ["production", "^production"]
     },
     "test": {
-      "cache": true
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/.eslintrc.json",
+        "{workspaceRoot}/.eslintignore"
+      ]
     }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/tests/**",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/jest.config.cjs",
+      "!{projectRoot}/vitest.config.ts"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/lerna.json",
+      "{workspaceRoot}/nx.json"
+    ]
   },
   "defaultBase": "main"
 }
