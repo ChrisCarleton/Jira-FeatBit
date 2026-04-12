@@ -174,4 +174,29 @@ describe('FlagTable', () => {
       'https://featbit.example.com/en/feature-flags/my-flag/targeting'
     );
   });
+
+  it('renders a project-group header row when environments span multiple projects', () => {
+    const multiProjectEnvs = [
+      {
+        id: 'env1',
+        key: 'prod',
+        name: 'Production',
+        projectId: 'p1',
+        projectName: 'Alpha',
+      },
+      {
+        id: 'env2',
+        key: 'stg',
+        name: 'Staging',
+        projectId: 'p2',
+        projectName: 'Beta',
+      },
+    ];
+    const wrapper = mount(FlagTable, {
+      props: { flags: [makeFlag()], environments: multiProjectEnvs },
+    });
+    // Both project names should appear in the header
+    expect(wrapper.text()).toContain('Alpha');
+    expect(wrapper.text()).toContain('Beta');
+  });
 });

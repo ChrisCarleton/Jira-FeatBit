@@ -67,7 +67,9 @@ describe('LinkFlagModal', () => {
   });
 
   it('shows an error returned from searchFlags', async () => {
-    mockSearchFlags.mockResolvedValueOnce({ error: 'No environments configured.' });
+    mockSearchFlags.mockResolvedValueOnce({
+      error: 'No environments configured.',
+    });
     const wrapper = mount(LinkFlagModal, { props: { issueKey: 'PROJ-1' } });
     await wrapper.find('input').setValue('x');
     await findButton(wrapper, 'Search')!.trigger('click');
@@ -89,7 +91,9 @@ describe('LinkFlagModal', () => {
 
   it('calls linkFlag with the correct payload', async () => {
     mockSearchFlags.mockResolvedValueOnce({ flags: [makeSearchFlag()] });
-    mockLinkFlag.mockResolvedValueOnce({ results: [{ envName: 'Prod', success: true }] });
+    mockLinkFlag.mockResolvedValueOnce({
+      results: [{ envName: 'Prod', success: true }],
+    });
     const wrapper = mount(LinkFlagModal, { props: { issueKey: 'PROJ-1' } });
     await wrapper.find('input').setValue('my');
     await findButton(wrapper, 'Search')!.trigger('click');
@@ -97,12 +101,17 @@ describe('LinkFlagModal', () => {
     await wrapper.find('[class*="transition-colors"]').trigger('click');
     await findButton(wrapper, 'Link flag')!.trigger('click');
     await flushPromises();
-    expect(mockLinkFlag).toHaveBeenCalledWith({ issueKey: 'PROJ-1', flagKey: 'my-flag' });
+    expect(mockLinkFlag).toHaveBeenCalledWith({
+      issueKey: 'PROJ-1',
+      flagKey: 'my-flag',
+    });
   });
 
   it('emits done with a success message after linking', async () => {
     mockSearchFlags.mockResolvedValueOnce({ flags: [makeSearchFlag()] });
-    mockLinkFlag.mockResolvedValueOnce({ results: [{ envName: 'Prod', success: true }] });
+    mockLinkFlag.mockResolvedValueOnce({
+      results: [{ envName: 'Prod', success: true }],
+    });
     const wrapper = mount(LinkFlagModal, { props: { issueKey: 'PROJ-1' } });
     await wrapper.find('input').setValue('my');
     await findButton(wrapper, 'Search')!.trigger('click');
@@ -130,6 +139,24 @@ describe('LinkFlagModal', () => {
     const wrapper = mount(LinkFlagModal, { props: { issueKey: 'PROJ-1' } });
     await findButton(wrapper, 'Cancel')!.trigger('click');
     expect(wrapper.emitted('close')).toBeTruthy();
+  });
+
+  it('emits done even when some environments failed (partial success)', async () => {
+    mockSearchFlags.mockResolvedValueOnce({ flags: [makeSearchFlag()] });
+    mockLinkFlag.mockResolvedValueOnce({
+      results: [
+        { envName: 'Prod', success: true },
+        { envName: 'Staging', success: false, error: 'Not found' },
+      ],
+    });
+    const wrapper = mount(LinkFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await wrapper.find('input').setValue('my');
+    await findButton(wrapper, 'Search')!.trigger('click');
+    await flushPromises();
+    await wrapper.find('[class*="transition-colors"]').trigger('click');
+    await findButton(wrapper, 'Link flag')!.trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('done')).toBeTruthy();
   });
 
   it('emits close when Escape is pressed', async () => {

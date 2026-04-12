@@ -1,6 +1,6 @@
 # featbit-jira
 
-[![CI](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chriscarleton/featbit-jira/actions/workflows/ci.yml?query=branch%3Amain)
+[![CI](https://github.com/ChrisCarleton/Jira-FeatBit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ChrisCarleton/Jira-FeatBit/actions/workflows/ci.yml?query=branch%3Amain)
 
 Atlassian Forge app that integrates [FeatBit](https://github.com/featbit/featbit) feature flags directly into Jira. From any Jira ticket you can view linked flags across multiple environments, create new flags, and link existing ones — all without leaving Jira.
 
@@ -266,6 +266,7 @@ forge deploy
 | `yarn build:watch`                       | Watch and rebuild both packages in parallel         |
 | `yarn build:typecheck`                   | Type-check both packages without emitting           |
 | `yarn test`                              | Run all unit tests (API Jest + UI Vitest) via Lerna |
+| `yarn test:coverage`                     | Run all tests with console + lcov coverage reports  |
 | `yarn lint`                              | ESLint across both packages                         |
 | `yarn lint:fix`                          | Auto-fix lint issues across both packages           |
 | `yarn format`                            | Prettier-format source across both packages         |
@@ -303,6 +304,38 @@ yarn test
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/api/tests/featbit.test.ts` | `listProjects`, `listFlagsByTag`, `searchFlags`, `createFlag`, `updateFlagTags` — correct URLs, request headers/bodies, response parsing, URL-encoding, error propagation |
 | `src/api/tests/index.test.ts`   | All 7 resolver handlers — config CRUD, environment discovery, flag querying (including parent-epic tag logic and flag de-duplication), flag creation and linking          |
+
+### Coverage
+
+Run both test suites with coverage enabled:
+
+```bash
+yarn test:coverage
+```
+
+This prints a per-file coverage table to the console and writes `lcov.info` files for each package:
+
+| Package             | Output                       |
+| ------------------- | ---------------------------- |
+| `@featbit-jira/api` | `src/api/coverage/lcov.info` |
+| `@featbit-jira/ui`  | `src/ui/coverage/lcov.info`  |
+
+You can open the HTML report locally:
+
+```bash
+# API
+open src/api/coverage/lcov-report/index.html
+
+# UI
+open src/ui/coverage/lcov-report/index.html
+```
+
+To run coverage for a single package:
+
+```bash
+yarn workspace @featbit-jira/api test:coverage
+yarn workspace @featbit-jira/ui test:coverage
+```
 
 ### Mocking strategy
 

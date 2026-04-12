@@ -18,6 +18,9 @@ node_modules/
 # Nx / Lerna task cache
 .nx/
 
+# Test coverage results
+coverage/
+
 # macOS
 .DS_Store
 

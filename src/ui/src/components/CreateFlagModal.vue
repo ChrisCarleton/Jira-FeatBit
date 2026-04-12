@@ -23,6 +23,7 @@ const name = ref('');
 const key = ref('');
 const description = ref('');
 const keyEdited = ref(false);
+const createRetireTicket = ref(false);
 const submitting = ref(false);
 const error = ref<string | null>(null);
 const nameInput = ref<HTMLInputElement | null>(null);
@@ -57,6 +58,7 @@ async function handleSubmit() {
     name: name.value.trim(),
     key: key.value.trim(),
     description: description.value.trim(),
+    createRetireTicket: createRetireTicket.value,
   });
   submitting.value = false;
   if (res.error) {
@@ -136,6 +138,15 @@ function handleKeyDown(e: KeyboardEvent) {
         rows="2"
         placeholder="What does this flag control?"
       />
+
+      <label class="flex items-center gap-2 mb-4 cursor-pointer select-none">
+        <input
+          v-model="createRetireTicket"
+          class="w-4 h-4 accent-accent cursor-pointer"
+          type="checkbox"
+        />
+        <span class="text-sm text-text">Create ticket to retire flag</span>
+      </label>
 
       <div class="flex justify-end gap-2 mt-2">
         <button

@@ -13,4 +13,6 @@ module.exports = {
     '^uuid$': '<rootDir>/__mocks__/uuid.cjs',
   },
   clearMocks: true,
+  coverageReporters: ['text', 'lcov'],
+  collectCoverageFrom: ['src/**/*.ts'],
 };

@@ -554,6 +554,106 @@ describe('createFlag', () => {
     expect(result.results[1]?.success).toBe(false);
     expect(result.results[1]?.error).toMatch(/Duplicate key/);
   });
+
+  it('creates a retire ticket and links it when createRetireTicket is true', async () => {
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
+    mockFeatBit.createFlag.mockResolvedValue(makeFlag());
+
+    const mockRequestJira = jest
+      .fn()
+      // getParentEpicKey call (getFlagsForIssue doesn't apply here, but
+      // postJiraComment and createRetireTicketForFlag share the same mock)
+      .mockResolvedValueOnce({
+        json: () => Promise.resolve({ key: 'PROJ-99' }),
+      }) // postJiraComment (comment)
+      .mockResolvedValueOnce({
+        json: () => Promise.resolve({ key: 'PROJ-100' }),
+      }) // create retire ticket
+      .mockResolvedValueOnce({ json: () => Promise.resolve({}) }); // issueLink
+
+    mockApi.asApp.mockReturnValue({ requestJira: mockRequestJira });
+
+    await call('createFlag', {
+      issueKey: 'PROJ-1',
+      name: 'New Flag',
+      key: 'new-flag',
+      createRetireTicket: true,
+    });
+
+    const calls = mockRequestJira.mock.calls as [string, unknown][];
+
+    const issueCreateCall = calls.find(([url]) =>
+      url.endsWith('/rest/api/3/issue')
+    );
+    expect(issueCreateCall).toBeDefined();
+    expect(JSON.parse((issueCreateCall![1] as { body: string }).body)).toEqual(
+      expect.objectContaining({
+        fields: expect.objectContaining({
+          summary: 'Retire new-flag feature flag',
+          issuetype: { name: 'Task' },
+          project: { key: 'PROJ' },
+        }),
+      })
+    );
+
+    const linkCall = calls.find(([url]) =>
+      url.endsWith('/rest/api/3/issueLink')
+    );
+    expect(linkCall).toBeDefined();
+    expect(JSON.parse((linkCall![1] as { body: string }).body)).toEqual(
+      expect.objectContaining({
+        type: { name: 'Connects' },
+        inwardIssue: { key: 'PROJ-100' },
+        outwardIssue: { key: 'PROJ-1' },
+      })
+    );
+  });
+
+  it('does not create a retire ticket when createRetireTicket is false', async () => {
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
+    mockFeatBit.createFlag.mockResolvedValue(makeFlag());
+
+    const mockRequestJira = jest.fn().mockResolvedValue({
+      json: () => Promise.resolve({}),
+    });
+    mockApi.asApp.mockReturnValue({ requestJira: mockRequestJira });
+
+    await call('createFlag', {
+      issueKey: 'PROJ-1',
+      name: 'New Flag',
+      key: 'new-flag',
+      createRetireTicket: false,
+    });
+
+    const calls = mockRequestJira.mock.calls as [string, unknown][];
+    expect(calls.some(([url]) => url.endsWith('/rest/api/3/issue'))).toBe(
+      false
+    );
+    expect(calls.some(([url]) => url.endsWith('/rest/api/3/issueLink'))).toBe(
+      false
+    );
+  });
+
+  it('still returns success when retire ticket Jira call fails', async () => {
+    mockKvsGet.mockResolvedValueOnce(storedConfig);
+    mockFeatBit.createFlag.mockResolvedValue(makeFlag());
+
+    const mockRequestJira = jest
+      .fn()
+      .mockResolvedValueOnce({ json: () => Promise.resolve({}) }) // postJiraComment
+      .mockRejectedValueOnce(new Error('Jira unavailable')); // retire ticket fails
+
+    mockApi.asApp.mockReturnValue({ requestJira: mockRequestJira });
+
+    const result = (await call('createFlag', {
+      issueKey: 'PROJ-1',
+      name: 'New Flag',
+      key: 'new-flag',
+      createRetireTicket: true,
+    })) as { results: Array<{ success: boolean }> };
+
+    expect(result.results.every((r) => r.success)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

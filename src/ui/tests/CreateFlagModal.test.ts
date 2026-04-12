@@ -77,6 +77,7 @@ describe('CreateFlagModal', () => {
       name: 'New Flag',
       key: 'new-flag',
       description: '',
+      createRetireTicket: false,
     });
   });
 
@@ -123,6 +124,40 @@ describe('CreateFlagModal', () => {
     expect(wrapper.text()).toContain('Duplicate key');
   });
 
+  it('passes createRetireTicket: true when checkbox is checked', async () => {
+    mockCreateFlag.mockResolvedValueOnce({
+      results: [{ envName: 'Prod', success: true }],
+    });
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await wrapper
+      .find('input[placeholder*="My New Feature"]')
+      .setValue('My Flag');
+    await wrapper.find('input[type="checkbox"]').setValue(true);
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    await flushPromises();
+    expect(mockCreateFlag).toHaveBeenCalledWith({
+      issueKey: 'PROJ-1',
+      name: 'My Flag',
+      key: 'my-flag',
+      description: '',
+      createRetireTicket: true,
+    });
+  });
+
+  it('submits the form when Enter is pressed on the dialog', async () => {
+    mockCreateFlag.mockResolvedValueOnce({
+      results: [{ envName: 'Prod', success: true }],
+    });
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await wrapper
+      .find('input[placeholder*="My New Feature"]')
+      .setValue('My Flag');
+    await wrapper.find('[role="dialog"]').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(mockCreateFlag).toHaveBeenCalled();
+    expect(wrapper.emitted('done')).toBeTruthy();
+  });
+
   it('emits close when Cancel is clicked', async () => {
     const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
     await findButton(wrapper, 'Cancel')!.trigger('click');
@@ -154,6 +189,7 @@ describe('CreateFlagModal', () => {
       name: 'My Flag',
       key: 'my-flag',
       description: 'A helpful description',
+      createRetireTicket: false,
     });
   });
 });

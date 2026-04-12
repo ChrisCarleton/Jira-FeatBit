@@ -57,6 +57,7 @@ export async function createFlag(payload: {
   name: string;
   key: string;
   description?: string;
+  createRetireTicket?: boolean;
 }): Promise<{
   results?: Array<{ envName: string; success: boolean; error?: string }>;
   error?: string;

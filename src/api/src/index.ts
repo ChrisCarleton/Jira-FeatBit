@@ -130,6 +130,44 @@ async function postJiraComment(issueKey: string, text: string): Promise<void> {
   }
 }
 
+/**
+ * Creates a "Retire <flagKey> feature flag" Task in Jira and links it to the
+ * originating issue with a "Connects" relation. Best-effort — never throws.
+ */
+async function createRetireTicketForFlag(
+  issueKey: string,
+  flagKey: string
+): Promise<void> {
+  try {
+    const projectKey = issueKey.split('-')[0];
+    const res = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: {
+          project: { key: projectKey },
+          summary: `Retire ${flagKey} feature flag`,
+          issuetype: { name: 'Task' },
+        },
+      }),
+    });
+    const created = (await res.json()) as { key?: string };
+    if (!created.key) return;
+
+    await api.asApp().requestJira(route`/rest/api/3/issueLink`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: { name: 'Connects' },
+        inwardIssue: { key: created.key },
+        outwardIssue: { key: issueKey },
+      }),
+    });
+  } catch {
+    // Best-effort — never fail the primary operation because of this
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Resolvers
 // ---------------------------------------------------------------------------
@@ -342,12 +380,14 @@ resolver.define('searchFlags', async (req) => {
 // ── Create a new flag ────────────────────────────────────────────────────────
 
 resolver.define('createFlag', async (req) => {
-  const { issueKey, name, key, description } = req.payload as {
-    issueKey: string;
-    name: string;
-    key: string;
-    description?: string;
-  };
+  const { issueKey, name, key, description, createRetireTicket } =
+    req.payload as {
+      issueKey: string;
+      name: string;
+      key: string;
+      description?: string;
+      createRetireTicket?: boolean;
+    };
 
   const cfg = await loadConfig();
   if (!cfg) return { error: 'FeatBit is not configured.' };
@@ -415,6 +455,11 @@ resolver.define('createFlag', async (req) => {
       issueKey,
       `Feature flag "${name}" (${key}) was created by ${actorName} via the FeatBit-Jira integration.`
     );
+
+    if (createRetireTicket) {
+      await createRetireTicketForFlag(issueKey, key);
+    }
+
     if (cfg.slackBotToken && cfg.slackChannelId) {
       const envNames = results.filter((r) => r.success).map((r) => r.envName);
       const blocks = buildFlagCreatedBlocks({
