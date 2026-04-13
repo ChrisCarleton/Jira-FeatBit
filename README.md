@@ -1,4 +1,4 @@
-# featbit-jira
+# Jira Extension For FeatBit Feature Flag Management
 
 [![CI](https://github.com/ChrisCarleton/Jira-FeatBit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ChrisCarleton/Jira-FeatBit/actions/workflows/ci.yml?query=branch%3Amain)
 
@@ -119,6 +119,10 @@ Flags that don't exist in a given environment show `N/A` rather than `Disabled`.
 - Docker + Docker Compose (for the local FeatBit test instance)
 
 ## Initial setup
+
+For instructions specific to Jira administrators check [here](JIRA_SETUP.md).
+
+For instructions on setting up Slack notifications check [here](SLACK_SETUP.md).
 
 ### 1. Install dependencies
 
@@ -258,6 +262,13 @@ yarn build
 forge deploy
 ```
 
+### For deployment to production
+
+```bash
+yarn build
+forge deploy --environment production
+```
+
 ## Useful commands
 
 | Command                                  | What it does                                        |
@@ -304,6 +315,11 @@ yarn test
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/api/tests/featbit.test.ts` | `listProjects`, `listFlagsByTag`, `searchFlags`, `createFlag`, `updateFlagTags` — correct URLs, request headers/bodies, response parsing, URL-encoding, error propagation |
 | `src/api/tests/index.test.ts`   | All 7 resolver handlers — config CRUD, environment discovery, flag querying (including parent-epic tag logic and flag de-duplication), flag creation and linking          |
+
+### Manual Regression Testing
+
+The script found [here](QA_TEST_SCRIPT.md) is a useful guide for testing the UI for
+regression issues.
 
 ### Coverage
 
