@@ -20,7 +20,11 @@
     "test": "lerna run test",
     "test:coverage": "lerna run test:coverage --stream",
     "tunnel": "forge tunnel",
-    "init-featbit": "node scripts/init-featbit.js"
+    "init-featbit": "node scripts/init-featbit.js",
+    "husky": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,vue,json,css,md}": "prettier --write"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
@@ -29,8 +33,10 @@
     "concurrently": "^9.2.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
     "jest": "^30.3.0",
     "lerna": "^8.0.0",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.2.5",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"

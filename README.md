@@ -132,6 +132,12 @@ yarn install
 
 This installs all dependencies for every workspace package (`@featbit-jira/api` and `@featbit-jira/ui`) in one step.
 
+Then initialize the git hooks (required once after cloning):
+
+```bash
+yarn husky
+```
+
 ### 2. Start a local FeatBit instance (optional, for testing)
 
 This project ships a standalone FeatBit stack (PostgreSQL only — no Redis, no Kafka) via `docker-compose.yml`.
