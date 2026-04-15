@@ -20,6 +20,10 @@ export async function saveConfig(payload: {
   return invoke('saveConfig', payload);
 }
 
+export async function clearConfig(): Promise<{ success: boolean }> {
+  return invoke('clearConfig');
+}
+
 // ── Environment discovery (Settings page) ───────────────────────────────────
 
 export async function fetchEnvironments(payload: {

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { shallowMount, flushPromises } from '@vue/test-utils';
 import Settings from '../src/views/Settings.vue';
+import ConfirmationDialog from '../src/components/ConfirmationDialog.vue';
+import ToastMessage from '../src/components/ToastMessage.vue';
 import * as api from '../src/api';
 import type { StoredConfig } from '../src/types';
 
@@ -12,11 +14,13 @@ vi.mock('../src/api', () => ({
   getConfig: vi.fn(),
   fetchEnvironments: vi.fn(),
   saveConfig: vi.fn(),
+  clearConfig: vi.fn(),
 }));
 
 const mockGetConfig = vi.mocked(api.getConfig);
 const mockFetchEnvironments = vi.mocked(api.fetchEnvironments);
 const mockSaveConfig = vi.mocked(api.saveConfig);
+const mockClearConfig = vi.mocked(api.clearConfig);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -57,6 +61,7 @@ beforeEach(() => {
   mockGetConfig.mockResolvedValue(null);
   mockFetchEnvironments.mockResolvedValue({ environments: [] });
   mockSaveConfig.mockResolvedValue({ success: true });
+  mockClearConfig.mockResolvedValue({ success: true });
 });
 
 // ---------------------------------------------------------------------------
@@ -96,7 +101,12 @@ describe('Settings', () => {
       .findAll('button')
       .find((b) => b.text().includes('Test connection'));
     await btn!.trigger('click');
-    expect(wrapper.text()).toContain('Enter both the API URL and access token');
+    const errorToast = wrapper
+      .findAllComponents(ToastMessage)
+      .find((c) => c.props('variant') === 'error');
+    expect(errorToast?.props('message')).toContain(
+      'Enter both the API URL and access token'
+    );
   });
 
   it('calls fetchEnvironments with correct credentials and shows env count', async () => {
@@ -117,7 +127,7 @@ describe('Settings', () => {
     expect(wrapper.text()).toContain('Environments (2 found)');
   });
 
-  it('shows a fetchError when fetchEnvironments returns an error', async () => {
+  it('shows an error toast when fetchEnvironments returns an error', async () => {
     mockFetchEnvironments.mockResolvedValueOnce({ error: 'Invalid token' });
     const wrapper = shallowMount(Settings);
     await wrapper.find('input[type="url"]').setValue('http://featbit.local');
@@ -127,7 +137,10 @@ describe('Settings', () => {
       .find((b) => b.text().includes('Test connection'));
     await btn!.trigger('click');
     await flushPromises();
-    expect(wrapper.text()).toContain('Invalid token');
+    const errorToast = wrapper
+      .findAllComponents(ToastMessage)
+      .find((c) => c.props('variant') === 'error');
+    expect(errorToast?.props('message')).toBe('Invalid token');
   });
 
   it('shows an error when Save is clicked without an API URL', async () => {
@@ -137,6 +150,59 @@ describe('Settings', () => {
       .find((b) => b.text() === 'Save settings');
     await saveBtn!.trigger('click');
     expect(wrapper.text()).toContain('API URL is required');
+  });
+
+  it('shows the API URL error inline below the field', async () => {
+    const wrapper = shallowMount(Settings);
+    const saveBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save settings');
+    await saveBtn!.trigger('click');
+    const urlInput = wrapper.find('input[type="url"]');
+    const inlineError = urlInput.element.nextElementSibling;
+    expect(inlineError?.tagName).toBe('P');
+    expect(inlineError?.textContent).toContain('API URL is required');
+  });
+
+  it('applies !border-danger class to the API URL input when URL is empty on save', async () => {
+    const wrapper = shallowMount(Settings);
+    const saveBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save settings');
+    await saveBtn!.trigger('click');
+    expect(wrapper.find('input[type="url"]').classes()).toContain(
+      '!border-danger'
+    );
+  });
+
+  it('does not call saveConfig when API URL is empty', async () => {
+    const wrapper = shallowMount(Settings);
+    const saveBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save settings');
+    await saveBtn!.trigger('click');
+    expect(mockSaveConfig).not.toHaveBeenCalled();
+  });
+
+  it('clears the API URL error and saves after providing a valid URL', async () => {
+    mockGetConfig.mockResolvedValueOnce(
+      makeConfig({ apiUrl: '', hasToken: true, environments: twoEnvs })
+    );
+    const wrapper = shallowMount(Settings);
+    await flushPromises();
+    const saveBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save settings');
+    // Trigger validation error
+    await saveBtn!.trigger('click');
+    expect(mockSaveConfig).not.toHaveBeenCalled();
+    // Fix the URL and save again
+    await wrapper.find('input[type="url"]').setValue('http://featbit.local');
+    await saveBtn!.trigger('click');
+    await flushPromises();
+    expect(mockSaveConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ apiUrl: 'http://featbit.local' })
+    );
   });
 
   it('calls saveConfig with the current form values', async () => {
@@ -234,5 +300,62 @@ describe('Settings', () => {
         ]),
       })
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Reset settings
+  // ---------------------------------------------------------------------------
+
+  it('shows a ConfirmationDialog when Reset settings is clicked', async () => {
+    const wrapper = shallowMount(Settings);
+    const resetBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Reset settings');
+    await resetBtn!.trigger('click');
+    expect(wrapper.findComponent(ConfirmationDialog).exists()).toBe(true);
+  });
+
+  it('hides the ConfirmationDialog and does not call clearConfig when cancel is emitted', async () => {
+    const wrapper = shallowMount(Settings);
+    const resetBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Reset settings');
+    await resetBtn!.trigger('click');
+    await wrapper.findComponent(ConfirmationDialog).vm.$emit('cancel');
+    expect(wrapper.findComponent(ConfirmationDialog).exists()).toBe(false);
+    expect(mockClearConfig).not.toHaveBeenCalled();
+  });
+
+  it('calls clearConfig and clears form fields when confirm is emitted', async () => {
+    mockGetConfig.mockResolvedValueOnce(
+      makeConfig({
+        apiUrl: 'http://featbit.local',
+        hasToken: true,
+        environments: twoEnvs,
+      })
+    );
+    const wrapper = shallowMount(Settings);
+    await flushPromises();
+    const resetBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Reset settings');
+    await resetBtn!.trigger('click');
+    await wrapper.findComponent(ConfirmationDialog).vm.$emit('confirm');
+    await flushPromises();
+    expect(mockClearConfig).toHaveBeenCalled();
+    // API URL input should be empty after reset
+    expect(
+      wrapper.find<HTMLInputElement>('input[type="url"]').element.value
+    ).toBe('');
+  });
+
+  it('passes dangerous=true to ConfirmationDialog', async () => {
+    const wrapper = shallowMount(Settings);
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Reset settings')!
+      .trigger('click');
+    const dialog = wrapper.findComponent(ConfirmationDialog);
+    expect(dialog.props('dangerous')).toBe(true);
   });
 });

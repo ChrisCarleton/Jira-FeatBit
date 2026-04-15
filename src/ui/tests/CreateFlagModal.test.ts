@@ -48,6 +48,33 @@ describe('CreateFlagModal', () => {
     expect(wrapper.text()).toContain('Flag name is required');
   });
 
+  it('shows the name error inline below the name field, not the API error banner', async () => {
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    // Inline <p> error is rendered immediately after the name input
+    const nameSection = wrapper.find('input[placeholder*="My New Feature"]');
+    const inlineError = nameSection.element.nextElementSibling;
+    expect(inlineError?.tagName).toBe('P');
+    expect(inlineError?.textContent).toContain('Flag name is required');
+    // The shared API error banner (first div with error class) should be absent
+    const banner = wrapper.find('.bg-danger-bg');
+    expect(banner.exists()).toBe(false);
+  });
+
+  it('applies border-danger class to the name input when name is missing on submit', async () => {
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    expect(
+      wrapper.find('input[placeholder*="My New Feature"]').classes()
+    ).toContain('border-danger');
+  });
+
+  it('does not call createFlag when name validation fails', async () => {
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    expect(mockCreateFlag).not.toHaveBeenCalled();
+  });
+
   it('shows an error when submitted with no key', async () => {
     const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
     // Set name then clear the auto-generated key
@@ -60,6 +87,50 @@ describe('CreateFlagModal', () => {
     await keyInput.setValue('');
     await findButton(wrapper, 'Create flag')!.trigger('click');
     expect(wrapper.text()).toContain('Flag key is required');
+  });
+
+  it('applies border-danger class to the key input when key is cleared on submit', async () => {
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await wrapper
+      .find<HTMLInputElement>('input[placeholder*="My New Feature"]')
+      .setValue('My Flag');
+    await wrapper
+      .find<HTMLInputElement>('input[placeholder*="my-new-feature"]')
+      .setValue('');
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    expect(
+      wrapper.find('input[placeholder*="my-new-feature"]').classes()
+    ).toContain('border-danger');
+  });
+
+  it('does not call createFlag when key validation fails', async () => {
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    await wrapper
+      .find<HTMLInputElement>('input[placeholder*="My New Feature"]')
+      .setValue('My Flag');
+    await wrapper
+      .find<HTMLInputElement>('input[placeholder*="my-new-feature"]')
+      .setValue('');
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    expect(mockCreateFlag).not.toHaveBeenCalled();
+  });
+
+  it('clears validation errors and submits after fixing an invalid field', async () => {
+    mockCreateFlag.mockResolvedValueOnce({
+      results: [{ envName: 'Prod', success: true }],
+    });
+    const wrapper = mount(CreateFlagModal, { props: { issueKey: 'PROJ-1' } });
+    // Trigger validation errors
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    expect(wrapper.text()).toContain('Flag name is required');
+    // Now fill in the required fields and re-submit
+    await wrapper
+      .find('input[placeholder*="My New Feature"]')
+      .setValue('Valid Flag');
+    await findButton(wrapper, 'Create flag')!.trigger('click');
+    await flushPromises();
+    expect(mockCreateFlag).toHaveBeenCalled();
+    expect(wrapper.emitted('done')).toBeTruthy();
   });
 
   it('calls createFlag with the correct payload on submit', async () => {

@@ -19,6 +19,20 @@
 
 ---
 
+## Resetting to a clean state
+
+Many test cases (especially section 1) require the app to be in an unconfigured state. Use the **Reset settings** button to wipe all saved configuration and return to first-run state.
+
+1. In Jira, open **Apps → FeatBit Settings**.
+2. Scroll to the bottom of the page and click **Reset settings**.
+3. Confirm the prompt — all saved settings (API URL, access token, environments, Slack credentials) are permanently deleted from Forge storage.
+4. The form clears immediately and a "Settings cleared." toast appears.
+5. The issue panel will now show the "FeatBit is not configured" message on all issues.
+
+> **Note:** Resetting settings does **not** affect flags or tags already created in FeatBit, nor does it remove Jira comments or retire tickets already created.
+
+---
+
 ## 1. Settings page
 
 Navigate to **Apps → FeatBit Settings** in Jira.
@@ -29,7 +43,17 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | --- | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
 | 1   | Open the Settings page for the first time (no config saved) | Page loads with empty API URL, empty token fields, no environment table |
 
-### 1.2 Input validation — Fetch
+### 1.2 Reset settings
+
+| #   | Steps                                                                          | Expected result                                                                                            |
+| --- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| 2   | With settings already saved, scroll to the bottom and click **Reset settings** | A confirmation prompt appears                                                                              |
+| 2a  | Click **Cancel** on the prompt                                                 | Nothing changes; settings remain intact                                                                    |
+| 2b  | Click **Reset settings** again and confirm                                     | All fields clear; toast "Settings cleared." appears; **Reset settings** button is disabled during the call |
+| 2c  | Reload the Settings page                                                       | All fields are empty; token placeholder shows "Enter access token" (not the "leave blank to keep" hint)    |
+| 2d  | Open any Jira issue                                                            | Panel shows "FeatBit is not configured." message                                                           |
+
+### 1.3 Input validation — Fetch
 
 | #   | Steps                                                              | Expected result                                                     |
 | --- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
@@ -37,7 +61,7 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | 3   | Enter API URL only (no token), click **Test connection**           | Same error                                                          |
 | 4   | Enter API URL + wrong access token, click **Test connection**      | Error message from FeatBit (e.g. "Unauthorized" or "Invalid token") |
 
-### 1.3 Successful connection
+### 1.4 Successful connection
 
 | #   | Steps                                                                      | Expected result                                                                                                   |
 | --- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -45,7 +69,7 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | 6   | _(after step 5 resolves)_                                                  | Success toast: "Connection successful — N environments loaded." Environments table appears showing matching count |
 | 7   | Verify the table columns: **Display Name**, **Key**, **ID**, **Read-only** | All four columns present; env names, keys, and IDs match FeatBit                                                  |
 
-### 1.4 Environment table editing
+### 1.5 Environment table editing
 
 | #   | Steps                                                                                      | Expected result                                 |
 | --- | ------------------------------------------------------------------------------------------ | ----------------------------------------------- |
@@ -53,13 +77,13 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | 9   | Check the **Read-only** checkbox on one environment                                        | Checkbox checked; state is retained when saving |
 | 10  | Check one checkbox, save, reload Settings                                                  | Checkbox is still checked on reload             |
 
-### 1.5 Multi-project display
+### 1.6 Multi-project display
 
 | #   | Steps                                                           | Expected result                                                                              |
 | --- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | 11  | If FeatBit has environments belonging to two different projects | Environment table shows a bold project-name group row separating each project's environments |
 
-### 1.6 Default environment
+### 1.7 Default environment
 
 | #   | Steps                                                                 | Expected result                                                                                            |
 | --- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -67,7 +91,7 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | 13  | Select a specific environment, save, reload Settings                  | The same environment is selected on reload                                                                 |
 | 14  | Select **None**, save                                                 | The **+ Create flag** button is hidden on the Issue Panel (test in section 3)                              |
 
-### 1.7 Portal URL
+### 1.8 Portal URL
 
 | #   | Steps                                                      | Expected result                                                |
 | --- | ---------------------------------------------------------- | -------------------------------------------------------------- |
@@ -75,13 +99,14 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | 16  | _(with Portal URL saved)_ Open any issue with linked flags | Flag names in the panel are clickable links                    |
 | 17  | Click a flag name link                                     | FeatBit portal opens in a new tab at the flag's targeting page |
 
-### 1.8 Input validation — Save
+### 1.9 Input validation — Save
 
-| #   | Steps                                            | Expected result               |
-| --- | ------------------------------------------------ | ----------------------------- |
-| 18  | Clear the API URL field, click **Save settings** | Error: "API URL is required." |
+| #   | Steps                                                           | Expected result                                                                                                                                |
+| --- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 18  | Clear the API URL field, click **Save settings**                | API URL field border turns red; error message "API URL is required." appears directly below the field; **Save settings** does not call the API |
+| 18a | Fix the URL (type a valid value), click **Save settings** again | Red border clears; error disappears; save proceeds normally                                                                                    |
 
-### 1.9 Successful save
+### 1.10 Successful save
 
 | #   | Steps                                                                 | Expected result                                                                                      |
 | --- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -89,7 +114,7 @@ Navigate to **Apps → FeatBit Settings** in Jira.
 | 20  | Reload Settings page                                                  | All saved values are pre-filled; token field shows placeholder "(token saved – leave blank to keep)" |
 | 21  | Leave token field blank, save again                                   | Old token is retained (placeholder confirms; no loss of connectivity)                                |
 
-### 1.10 Slack configuration (optional)
+### 1.11 Slack configuration (optional)
 
 | #   | Steps                                                   | Expected result                                                                       |
 | --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -202,10 +227,11 @@ Click **+ Create flag** on any issue panel.
 
 ### 4.4 Validation
 
-| #   | Steps                                               | Expected result                 |
-| --- | --------------------------------------------------- | ------------------------------- |
-| 50  | Click **Create flag** with empty name               | Error: "Flag name is required." |
-| 51  | Clear the key field manually, click **Create flag** | Error: "Flag key is required."  |
+| #   | Steps                                                                                 | Expected result                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 50  | Click **Create flag** with empty name                                                 | Flag name field border turns red; error "Flag name is required." appears directly below the field; Flag key field also highlighted if empty; API not called |
+| 51  | Type a name (auto-generates key), clear the key field manually, click **Create flag** | Flag key field border turns red; error "Flag key is required." appears directly below the key field; API not called                                         |
+| 51a | Fix the invalid field (type a value), click **Create flag** again                     | Red border clears; error disappears; submission proceeds normally                                                                                           |
 
 ### 4.5 Successful creation
 

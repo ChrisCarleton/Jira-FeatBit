@@ -709,6 +709,8 @@ __metadata:
     "@vitejs/plugin-vue": "npm:^5.2.0"
     "@vitest/coverage-v8": "npm:^2"
     "@vue/test-utils": "npm:^2.4.6"
+    "@vuelidate/core": "npm:^2.0.3"
+    "@vuelidate/validators": "npm:^2.0.4"
     eslint: "npm:^8.56.0"
     eslint-plugin-vue: "npm:^9.0.0"
     happy-dom: "npm:^20.8.9"
@@ -3234,6 +3236,36 @@ __metadata:
     js-beautify: "npm:^1.14.9"
     vue-component-type-helpers: "npm:^2.0.0"
   checksum: 10c0/37fa46cb6b98f90affb2faf5aa41422617bbd23ff35bc714d08035334e593ae31d18757d5ae688f778dd8b4c28de431601c0b9b7ca17fc1b55f1401a5577375e
+  languageName: node
+  linkType: hard
+
+"@vuelidate/core@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "@vuelidate/core@npm:2.0.3"
+  dependencies:
+    vue-demi: "npm:^0.13.11"
+  peerDependencies:
+    "@vue/composition-api": ^1.0.0-rc.1
+    vue: ^2.0.0 || >=3.0.0
+  peerDependenciesMeta:
+    "@vue/composition-api":
+      optional: true
+  checksum: 10c0/bdd5df3692adcb9bef3dc430f3ec4c763364b27691008a4f1e3cc28ad492f5ae0e8c1cc60585ef220ecac9ad65e0a0a312e7ae3bb56a1ed05c765adb04a0d533
+  languageName: node
+  linkType: hard
+
+"@vuelidate/validators@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "@vuelidate/validators@npm:2.0.4"
+  dependencies:
+    vue-demi: "npm:^0.13.11"
+  peerDependencies:
+    "@vue/composition-api": ^1.0.0-rc.1
+    vue: ^2.0.0 || >=3.0.0
+  peerDependenciesMeta:
+    "@vue/composition-api":
+      optional: true
+  checksum: 10c0/53cb362b5b561b22fb1d1021ab0d78e0fbf3324efba78a88f53b8b3ac996d546aabb9cd1069256ddb877d70841ea1f4771cb0f6b6b8a1074efbd972c6549c2fc
   languageName: node
   linkType: hard
 
@@ -10898,6 +10930,22 @@ __metadata:
   version: 2.2.12
   resolution: "vue-component-type-helpers@npm:2.2.12"
   checksum: 10c0/ce15a2cdec4a57262a292ac1565aa18da9be73f3dfbcf28758a8a541199944bfff1aefb75802d6de5d955a5529c9667f1b651c659d14815c075e8965ac05175d
+  languageName: node
+  linkType: hard
+
+"vue-demi@npm:^0.13.11":
+  version: 0.13.11
+  resolution: "vue-demi@npm:0.13.11"
+  peerDependencies:
+    "@vue/composition-api": ^1.0.0-rc.1
+    vue: ^3.0.0-0 || ^2.6.0
+  peerDependenciesMeta:
+    "@vue/composition-api":
+      optional: true
+  bin:
+    vue-demi-fix: bin/vue-demi-fix.js
+    vue-demi-switch: bin/vue-demi-switch.js
+  checksum: 10c0/8f1a38e41e3dd0a4821c87231c664dcc00e6dbf5eecd3de397b7ddb6ae01f173aed5385c55a3c3239be36145742f1a5be407662fc67f9c4515ea691dd0ac93e1
   languageName: node
   linkType: hard
 

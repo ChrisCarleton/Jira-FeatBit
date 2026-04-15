@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { createFlag } from '../api';
+import { useVuelidate } from '@vuelidate/core';
+import { helpers } from '@vuelidate/validators';
+
+const trimRequired = (msg: string) =>
+  helpers.withMessage(
+    msg,
+    (val: unknown) => String(val ?? '').trim().length > 0
+  );
 
 function nameToKey(name: string): string {
   return name
@@ -28,6 +36,14 @@ const submitting = ref(false);
 const error = ref<string | null>(null);
 const nameInput = ref<HTMLInputElement | null>(null);
 
+const v$ = useVuelidate(
+  {
+    name: { required: trimRequired('Flag name is required.') },
+    key: { required: trimRequired('Flag key is required.') },
+  },
+  { name, key }
+);
+
 onMounted(() => {
   nameInput.value?.focus();
 });
@@ -43,14 +59,8 @@ function handleKeyChange(val: string) {
 }
 
 async function handleSubmit() {
-  if (!name.value.trim()) {
-    error.value = 'Flag name is required.';
-    return;
-  }
-  if (!key.value.trim()) {
-    error.value = 'Flag key is required.';
-    return;
-  }
+  v$.value.$touch();
+  if (v$.value.$invalid) return;
   submitting.value = true;
   error.value = null;
   const res = await createFlag({
@@ -110,23 +120,37 @@ function handleKeyDown(e: KeyboardEvent) {
       >
       <input
         ref="nameInput"
-        class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3"
+        :class="[
+          'w-full px-2.5 py-1.5 bg-surface border-2 rounded text-sm text-text outline-none mb-1',
+          v$.name.$error ? 'border-danger' : 'border-border focus:border-link',
+        ]"
         type="text"
         :value="name"
         placeholder="e.g. My New Feature"
         @input="handleNameChange(($event.target as HTMLInputElement).value)"
       />
+      <p v-if="v$.name.$error" class="mb-3 text-xs text-danger">
+        {{ v$.name.$errors[0]?.$message }}
+      </p>
+      <div v-else class="mb-2" />
 
       <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Flag key</label
       >
       <input
-        class="w-full px-2.5 py-1.5 bg-surface border-2 border-border rounded text-sm text-text outline-none focus:border-link mb-3"
+        :class="[
+          'w-full px-2.5 py-1.5 bg-surface border-2 rounded text-sm text-text outline-none mb-1',
+          v$.key.$error ? 'border-danger' : 'border-border focus:border-link',
+        ]"
         type="text"
         :value="key"
         placeholder="e.g. my-new-feature"
         @input="handleKeyChange(($event.target as HTMLInputElement).value)"
       />
+      <p v-if="v$.key.$error" class="mb-3 text-xs text-danger">
+        {{ v$.key.$errors[0]?.$message }}
+      </p>
+      <div v-else class="mb-2" />
 
       <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Description

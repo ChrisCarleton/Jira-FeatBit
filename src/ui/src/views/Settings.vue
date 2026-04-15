@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { fetchEnvironments, getConfig, saveConfig } from '../api';
+import { fetchEnvironments, getConfig, saveConfig, clearConfig } from '../api';
 import type { Environment } from '../types';
 import ToastMessage from '../components/ToastMessage.vue';
+import ConfirmationDialog from '../components/ConfirmationDialog.vue';
 import { useToast } from '../composables/useToast';
+import { useVuelidate } from '@vuelidate/core';
+import { helpers } from '@vuelidate/validators';
+
+const trimRequired = (msg: string) =>
+  helpers.withMessage(
+    msg,
+    (val: unknown) => String(val ?? '').trim().length > 0
+  );
 
 const apiUrl = ref('');
 const accessToken = ref('');
@@ -18,9 +27,16 @@ const slackTokenPlaceholder = ref('Enter bot token (xoxb-...)');
 const slackChannelId = ref('');
 const fetching = ref(false);
 const saving = ref(false);
-const fetchError = ref<string | null>(null);
+const resetting = ref(false);
+const showResetDialog = ref(false);
+const fetchErrorToast = useToast();
 const fetchToast = useToast();
 const saveToast = useToast();
+
+const v$ = useVuelidate(
+  { apiUrl: { required: trimRequired('API URL is required.') } },
+  { apiUrl }
+);
 
 onMounted(() => {
   void getConfig().then((cfg) => {
@@ -44,11 +60,11 @@ onMounted(() => {
 async function handleFetchEnvs() {
   const token = accessToken.value;
   if (!apiUrl.value || (!token && !hasToken.value)) {
-    fetchError.value = 'Enter both the API URL and access token first.';
+    fetchErrorToast.show('Enter both the API URL and access token first.');
     return;
   }
   fetching.value = true;
-  fetchError.value = null;
+  fetchErrorToast.clear();
   fetchToast.clear();
   const res = await fetchEnvironments({
     apiUrl: apiUrl.value,
@@ -56,7 +72,7 @@ async function handleFetchEnvs() {
   });
   fetching.value = false;
   if (res.error) {
-    fetchError.value = res.error;
+    fetchErrorToast.show(res.error);
   } else {
     environments.value = res.environments ?? [];
     const count = res.environments?.length ?? 0;
@@ -67,18 +83,16 @@ async function handleFetchEnvs() {
 }
 
 async function handleSave() {
-  if (!apiUrl.value) {
-    saveToast.clear();
-    fetchError.value = 'API URL is required.';
-    return;
-  }
+  v$.value.$touch();
+  if (v$.value.$invalid) return;
   if (
     !accessToken.value &&
     !hasToken.value &&
     environments.value.length === 0
   ) {
-    fetchError.value =
-      'Fetch environments before saving, or provide an access token.';
+    fetchErrorToast.show(
+      'Fetch environments before saving, or provide an access token.'
+    );
     return;
   }
   saving.value = true;
@@ -102,6 +116,28 @@ async function handleSave() {
     hasSlackToken.value = true;
     slackTokenPlaceholder.value = '(token saved – leave blank to keep)';
   }
+}
+
+async function handleReset() {
+  showResetDialog.value = false;
+  resetting.value = true;
+  saveToast.clear();
+  await clearConfig();
+  apiUrl.value = '';
+  accessToken.value = '';
+  hasToken.value = false;
+  tokenPlaceholder.value = 'Enter access token';
+  environments.value = [];
+  defaultEnvId.value = '';
+  portalUrl.value = '';
+  slackBotToken.value = '';
+  hasSlackToken.value = false;
+  slackTokenPlaceholder.value = 'Enter bot token (xoxb-...)';
+  slackChannelId.value = '';
+  fetchErrorToast.clear();
+  v$.value.$reset();
+  resetting.value = false;
+  saveToast.show('Settings cleared.');
 }
 
 function handleEnvNameChange(id: string, name: string) {
@@ -137,8 +173,6 @@ const inputCls =
 
 <template>
   <div class="p-5 max-w-xl">
-    <h1 class="text-lg font-bold text-text mb-5">FeatBit Settings</h1>
-
     <div class="mb-6">
       <h2 class="text-sm font-semibold text-text mb-2">Connection</h2>
 
@@ -147,10 +181,13 @@ const inputCls =
       >
       <input
         v-model="apiUrl"
-        :class="inputCls"
+        :class="[inputCls, { '!border-danger': v$.apiUrl.$error }]"
         type="url"
         placeholder="https://your-featbit-instance.com:5000"
       />
+      <p v-if="v$.apiUrl.$error" class="-mt-2 mb-3 text-xs text-danger">
+        {{ v$.apiUrl.$errors[0]?.$message }}
+      </p>
 
       <label class="block text-xs font-semibold text-text-subtle mb-1"
         >Access Token</label
@@ -184,12 +221,11 @@ const inputCls =
       </button>
     </div>
 
-    <div
-      v-if="fetchError"
-      class="px-3.5 py-2.5 bg-danger-bg border border-danger rounded-lg text-xs text-danger mb-3 animate-fade-in"
-    >
-      {{ fetchError }}
-    </div>
+    <ToastMessage
+      variant="error"
+      :message="fetchErrorToast.message.value"
+      :fading="fetchErrorToast.fading.value"
+    />
 
     <ToastMessage
       :message="fetchToast.message.value"
@@ -356,10 +392,28 @@ const inputCls =
 
     <button
       class="px-4 py-1.5 bg-accent text-white border-0 rounded text-sm font-medium cursor-pointer disabled:opacity-50"
-      :disabled="saving"
+      :disabled="saving || resetting"
       @click="handleSave"
     >
       {{ saving ? 'Saving…' : 'Save settings' }}
     </button>
+
+    <button
+      class="ml-3 px-4 py-1.5 bg-surface-overlay text-danger border border-danger rounded text-sm font-medium cursor-pointer disabled:opacity-50"
+      :disabled="saving || resetting"
+      @click="showResetDialog = true"
+    >
+      {{ resetting ? 'Resetting…' : 'Reset settings' }}
+    </button>
+
+    <ConfirmationDialog
+      v-if="showResetDialog"
+      title="Reset settings"
+      message="This will permanently delete all saved FeatBit settings, including your API URL, access token, environments, and Slack credentials. This cannot be undone."
+      confirm-label="Reset settings"
+      :dangerous="true"
+      @confirm="handleReset"
+      @cancel="showResetDialog = false"
+    />
   </div>
 </template>

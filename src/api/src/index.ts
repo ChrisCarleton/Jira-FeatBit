@@ -610,4 +610,9 @@ resolver.define('toggleFlag', async (req) => {
   }
 });
 
+resolver.define('clearConfig', async () => {
+  await kvs.delete('featbit-config');
+  return { success: true };
+});
+
 export const handler = resolver.getDefinitions();
