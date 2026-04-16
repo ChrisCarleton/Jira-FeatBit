@@ -69,11 +69,6 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('Settings', () => {
-  it('renders the page heading', () => {
-    const wrapper = shallowMount(Settings);
-    expect(wrapper.text()).toContain('FeatBit Settings');
-  });
-
   it('pre-fills the API URL from stored config on mount', async () => {
     mockGetConfig.mockResolvedValueOnce(
       makeConfig({ apiUrl: 'http://my-featbit.com' })

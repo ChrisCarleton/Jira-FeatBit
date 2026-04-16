@@ -23,7 +23,6 @@ describe('useToast', () => {
     const { message, show } = useToast();
     show('Hello!');
     expect(message.value).toBe('Hello!');
-    expect; // message is visible right away
   });
 
   it('show() sets fading to false when called', () => {
